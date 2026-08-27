@@ -12969,5 +12969,1163 @@
       "auto": false,
       "Remarks": []
     }
+  },
+  {
+    "station": "WIPP",
+    "raw": "METAR WIPP 270430Z 12009KT 9999 SCT015 33/22 Q1013 NOSIG=",
+    "header": "SAID32 WIPP 270430 \n                                        METAR WIPP 270430Z 12009KT 9999 SCT015 33/22 Q1013 NOSIG=",
+    "datetime": "2026-08-27 04:30:00",
+    "parsed": {
+      "raw": "METAR WIPP 270430Z 12009KT 9999 SCT015 33/22 Q1013 NOSIG=",
+      "type": "METAR",
+      "station": "WIPP",
+      "time": "270430Z",
+      "observationTime": "2026-08-27T04:30:00.000Z",
+      "wind": {
+        "direction": "120",
+        "speed": "09",
+        "unit": "KT",
+        "variable": false
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "SCT",
+          "height": "015"
+        }
+      ],
+      "temperature": "33",
+      "dewpoint": "22",
+      "altimeter": {
+        "value": "1013",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 11:30 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 270430Z 22004KT 180V260 9999 FEW020 31/24 Q1013 NOSIG=",
+    "header": "SAID32 WIEE 270430 \n                                        METAR WIEE 270430Z 22004KT 180V260 9999 FEW020 31/24 Q1013 NOSIG=",
+    "datetime": "2026-08-27 04:30:00",
+    "parsed": {
+      "raw": "METAR WIEE 270430Z 22004KT 180V260 9999 FEW020 31/24 Q1013 NOSIG=",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "270430Z",
+      "observationTime": "2026-08-27T04:30:00.000Z",
+      "wind": {
+        "direction": "220",
+        "speed": "04",
+        "unit": "KT",
+        "variable": false,
+        "variation": {
+          "from": "180",
+          "to": "260"
+        }
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "31",
+      "dewpoint": "24",
+      "altimeter": {
+        "value": "1013",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 11:30 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 270430Z 22004KT 180V260 9999 FEW020 31/24 Q1013 NOSIG",
+    "header": "SA WIEE 270430Z",
+    "datetime": "2026-08-27 04:30",
+    "parsed": {
+      "raw": "METAR WIEE 270430Z 22004KT 180V260 9999 FEW020 31/24 Q1013 NOSIG",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "270430Z",
+      "observationTime": "2026-08-27T04:30:00.000Z",
+      "wind": {
+        "direction": "220",
+        "speed": "04",
+        "unit": "KT",
+        "variable": false,
+        "variation": {
+          "from": "180",
+          "to": "260"
+        }
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "31",
+      "dewpoint": "24",
+      "altimeter": {
+        "value": "1013",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 11:30 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 270400Z 23004KT 130V290 9999 FEW020 31/24 Q1013 NOSIG",
+    "header": "SA WIEE 270400Z",
+    "datetime": "2026-08-27 04:00",
+    "parsed": {
+      "raw": "METAR WIEE 270400Z 23004KT 130V290 9999 FEW020 31/24 Q1013 NOSIG",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "270400Z",
+      "observationTime": "2026-08-27T04:00:00.000Z",
+      "wind": {
+        "direction": "230",
+        "speed": "04",
+        "unit": "KT",
+        "variable": false,
+        "variation": {
+          "from": "130",
+          "to": "290"
+        }
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "31",
+      "dewpoint": "24",
+      "altimeter": {
+        "value": "1013",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 11:00 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 270330Z 23004KT 160V300 9999 FEW020 31/25 Q1014 NOSIG",
+    "header": "SA WIEE 270330Z",
+    "datetime": "2026-08-27 03:30",
+    "parsed": {
+      "raw": "METAR WIEE 270330Z 23004KT 160V300 9999 FEW020 31/25 Q1014 NOSIG",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "270330Z",
+      "observationTime": "2026-08-27T03:30:00.000Z",
+      "wind": {
+        "direction": "230",
+        "speed": "04",
+        "unit": "KT",
+        "variable": false,
+        "variation": {
+          "from": "160",
+          "to": "300"
+        }
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "31",
+      "dewpoint": "25",
+      "altimeter": {
+        "value": "1014",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 10:30 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 270300Z 26004KT 210V310 9999 FEW020 30/24 Q1014 NOSIG",
+    "header": "SA WIEE 270300Z",
+    "datetime": "2026-08-27 03:00",
+    "parsed": {
+      "raw": "METAR WIEE 270300Z 26004KT 210V310 9999 FEW020 30/24 Q1014 NOSIG",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "270300Z",
+      "observationTime": "2026-08-27T03:00:00.000Z",
+      "wind": {
+        "direction": "260",
+        "speed": "04",
+        "unit": "KT",
+        "variable": false,
+        "variation": {
+          "from": "210",
+          "to": "310"
+        }
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "30",
+      "dewpoint": "24",
+      "altimeter": {
+        "value": "1014",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 10:00 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 270230Z 27004KT 220V030 9999 FEW020 30/24 Q1014 NOSIG",
+    "header": "SA WIEE 270230Z",
+    "datetime": "2026-08-27 02:30",
+    "parsed": {
+      "raw": "METAR WIEE 270230Z 27004KT 220V030 9999 FEW020 30/24 Q1014 NOSIG",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "270230Z",
+      "observationTime": "2026-08-27T02:30:00.000Z",
+      "wind": {
+        "direction": "270",
+        "speed": "04",
+        "unit": "KT",
+        "variable": false,
+        "variation": {
+          "from": "220",
+          "to": "030"
+        }
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "30",
+      "dewpoint": "24",
+      "altimeter": {
+        "value": "1014",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 09:30 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 270200Z VRB02KT 9999 FEW020 30/25 Q1013 NOSIG",
+    "header": "SA WIEE 270200Z",
+    "datetime": "2026-08-27 02:00",
+    "parsed": {
+      "raw": "METAR WIEE 270200Z VRB02KT 9999 FEW020 30/25 Q1013 NOSIG",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "270200Z",
+      "observationTime": "2026-08-27T02:00:00.000Z",
+      "wind": {
+        "direction": "VRB",
+        "speed": "02",
+        "unit": "KT",
+        "variable": true
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "30",
+      "dewpoint": "25",
+      "altimeter": {
+        "value": "1013",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 09:00 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 270130Z 36003KT 310V040 9999 FEW020 29/24 Q1013 NOSIG",
+    "header": "SA WIEE 270130Z",
+    "datetime": "2026-08-27 01:30",
+    "parsed": {
+      "raw": "METAR WIEE 270130Z 36003KT 310V040 9999 FEW020 29/24 Q1013 NOSIG",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "270130Z",
+      "observationTime": "2026-08-27T01:30:00.000Z",
+      "wind": {
+        "direction": "360",
+        "speed": "03",
+        "unit": "KT",
+        "variable": false,
+        "variation": {
+          "from": "310",
+          "to": "040"
+        }
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "29",
+      "dewpoint": "24",
+      "altimeter": {
+        "value": "1013",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 08:30 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 270100Z 01003KT 340V040 9999 FEW020 27/24 Q1013 NOSIG",
+    "header": "SA WIEE 270100Z",
+    "datetime": "2026-08-27 01:00",
+    "parsed": {
+      "raw": "METAR WIEE 270100Z 01003KT 340V040 9999 FEW020 27/24 Q1013 NOSIG",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "270100Z",
+      "observationTime": "2026-08-27T01:00:00.000Z",
+      "wind": {
+        "direction": "010",
+        "speed": "03",
+        "unit": "KT",
+        "variable": false,
+        "variation": {
+          "from": "340",
+          "to": "040"
+        }
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "27",
+      "dewpoint": "24",
+      "altimeter": {
+        "value": "1013",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 08:00 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 270030Z 01003KT 9999 FEW020 26/24 Q1013 NOSIG",
+    "header": "SA WIEE 270030Z",
+    "datetime": "2026-08-27 00:30",
+    "parsed": {
+      "raw": "METAR WIEE 270030Z 01003KT 9999 FEW020 26/24 Q1013 NOSIG",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "270030Z",
+      "observationTime": "2026-08-27T00:30:00.000Z",
+      "wind": {
+        "direction": "010",
+        "speed": "03",
+        "unit": "KT",
+        "variable": false
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "26",
+      "dewpoint": "24",
+      "altimeter": {
+        "value": "1013",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 07:30 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 270000Z 02002KT 9999 -RA FEW020 24/24 Q1013 NOSIG",
+    "header": "SA WIEE 270000Z",
+    "datetime": "2026-08-27 00:00",
+    "parsed": {
+      "raw": "METAR WIEE 270000Z 02002KT 9999 -RA FEW020 24/24 Q1013 NOSIG",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "270000Z",
+      "observationTime": "2026-08-27T00:00:00.000Z",
+      "wind": {
+        "direction": "020",
+        "speed": "02",
+        "unit": "KT",
+        "variable": false
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [
+        "-RA"
+      ],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "24",
+      "dewpoint": "24",
+      "altimeter": {
+        "value": "1013",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 07:00 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 262330Z VRB02KT 9999 FEW020 24/24 Q1012 NOSIG",
+    "header": "SA WIEE 262330Z",
+    "datetime": "2026-08-26 23:30",
+    "parsed": {
+      "raw": "METAR WIEE 262330Z VRB02KT 9999 FEW020 24/24 Q1012 NOSIG",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "262330Z",
+      "observationTime": "2026-08-26T23:30:00.000Z",
+      "wind": {
+        "direction": "VRB",
+        "speed": "02",
+        "unit": "KT",
+        "variable": true
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "24",
+      "dewpoint": "24",
+      "altimeter": {
+        "value": "1012",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 06:30 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 262300Z 03004KT 9999 FEW020 24/24 Q1012 NOSIG",
+    "header": "SA WIEE 262300Z",
+    "datetime": "2026-08-26 23:00",
+    "parsed": {
+      "raw": "METAR WIEE 262300Z 03004KT 9999 FEW020 24/24 Q1012 NOSIG",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "262300Z",
+      "observationTime": "2026-08-26T23:00:00.000Z",
+      "wind": {
+        "direction": "030",
+        "speed": "04",
+        "unit": "KT",
+        "variable": false
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "24",
+      "dewpoint": "24",
+      "altimeter": {
+        "value": "1012",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 06:00 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 262230Z 04002KT 9999 FEW020 24/24 Q1012 NOSIG",
+    "header": "SA WIEE 262230Z",
+    "datetime": "2026-08-26 22:30",
+    "parsed": {
+      "raw": "METAR WIEE 262230Z 04002KT 9999 FEW020 24/24 Q1012 NOSIG",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "262230Z",
+      "observationTime": "2026-08-26T22:30:00.000Z",
+      "wind": {
+        "direction": "040",
+        "speed": "02",
+        "unit": "KT",
+        "variable": false
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "24",
+      "dewpoint": "24",
+      "altimeter": {
+        "value": "1012",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 05:30 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 262200Z COR 04003KT 9999 FEW020 24/24 Q1012 NOSIG",
+    "header": "SA WIEE 262200Z",
+    "datetime": "2026-08-26 22:00",
+    "parsed": {
+      "raw": "METAR WIEE 262200Z COR 04003KT 9999 FEW020 24/24 Q1012 NOSIG",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "262200Z",
+      "observationTime": "2026-08-26T22:00:00.000Z",
+      "wind": {
+        "direction": "040",
+        "speed": "03",
+        "unit": "KT",
+        "variable": false
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "24",
+      "dewpoint": "24",
+      "altimeter": {
+        "value": "1012",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 05:00 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 262130Z COR VRB01KT 9999 FEW020 24/24 Q1012 NOSIG",
+    "header": "SA WIEE 262130Z",
+    "datetime": "2026-08-26 21:30",
+    "parsed": {
+      "raw": "METAR WIEE 262130Z COR VRB01KT 9999 FEW020 24/24 Q1012 NOSIG",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "262130Z",
+      "observationTime": "2026-08-26T21:30:00.000Z",
+      "wind": {
+        "direction": "VRB",
+        "speed": "01",
+        "unit": "KT",
+        "variable": true
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "24",
+      "dewpoint": "24",
+      "altimeter": {
+        "value": "1012",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 04:30 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 262100Z VRB02KT 9999 FEW020 24/24 Q1012",
+    "header": "SA WIEE 262100Z",
+    "datetime": "2026-08-26 21:00",
+    "parsed": {
+      "raw": "METAR WIEE 262100Z VRB02KT 9999 FEW020 24/24 Q1012",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "262100Z",
+      "observationTime": "2026-08-26T21:00:00.000Z",
+      "wind": {
+        "direction": "VRB",
+        "speed": "02",
+        "unit": "KT",
+        "variable": true
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "24",
+      "dewpoint": "24",
+      "altimeter": {
+        "value": "1012",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 04:00 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 262030Z 03003KT 9999 FEW020 24/24 Q1012 NOSIG",
+    "header": "SA WIEE 262030Z",
+    "datetime": "2026-08-26 20:30",
+    "parsed": {
+      "raw": "METAR WIEE 262030Z 03003KT 9999 FEW020 24/24 Q1012 NOSIG",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "262030Z",
+      "observationTime": "2026-08-26T20:30:00.000Z",
+      "wind": {
+        "direction": "030",
+        "speed": "03",
+        "unit": "KT",
+        "variable": false
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "24",
+      "dewpoint": "24",
+      "altimeter": {
+        "value": "1012",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 03:30 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 262000Z 04002KT 9999 FEW020 24/24 Q1012 NOSIG",
+    "header": "SA WIEE 262000Z",
+    "datetime": "2026-08-26 20:00",
+    "parsed": {
+      "raw": "METAR WIEE 262000Z 04002KT 9999 FEW020 24/24 Q1012 NOSIG",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "262000Z",
+      "observationTime": "2026-08-26T20:00:00.000Z",
+      "wind": {
+        "direction": "040",
+        "speed": "02",
+        "unit": "KT",
+        "variable": false
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "24",
+      "dewpoint": "24",
+      "altimeter": {
+        "value": "1012",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 03:00 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 261930Z 04002KT 9999 FEW020 24/24 Q1012 NOSIG",
+    "header": "SA WIEE 261930Z",
+    "datetime": "2026-08-26 19:30",
+    "parsed": {
+      "raw": "METAR WIEE 261930Z 04002KT 9999 FEW020 24/24 Q1012 NOSIG",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "261930Z",
+      "observationTime": "2026-08-26T19:30:00.000Z",
+      "wind": {
+        "direction": "040",
+        "speed": "02",
+        "unit": "KT",
+        "variable": false
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "24",
+      "dewpoint": "24",
+      "altimeter": {
+        "value": "1012",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 02:30 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 261900Z VRB01KT 9999 FEW020 24/24 Q1013 NOSIG",
+    "header": "SA WIEE 261900Z",
+    "datetime": "2026-08-26 19:00",
+    "parsed": {
+      "raw": "METAR WIEE 261900Z VRB01KT 9999 FEW020 24/24 Q1013 NOSIG",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "261900Z",
+      "observationTime": "2026-08-26T19:00:00.000Z",
+      "wind": {
+        "direction": "VRB",
+        "speed": "01",
+        "unit": "KT",
+        "variable": true
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "24",
+      "dewpoint": "24",
+      "altimeter": {
+        "value": "1013",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 02:00 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 261830Z VRB02KT 9999 FEW020 25/24 Q1013 NOSIG",
+    "header": "SA WIEE 261830Z",
+    "datetime": "2026-08-26 18:30",
+    "parsed": {
+      "raw": "METAR WIEE 261830Z VRB02KT 9999 FEW020 25/24 Q1013 NOSIG",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "261830Z",
+      "observationTime": "2026-08-26T18:30:00.000Z",
+      "wind": {
+        "direction": "VRB",
+        "speed": "02",
+        "unit": "KT",
+        "variable": true
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "25",
+      "dewpoint": "24",
+      "altimeter": {
+        "value": "1013",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 01:30 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 261800Z 05003KT 010V070 9999 FEW020 24/23 Q1013 NOSIG",
+    "header": "SA WIEE 261800Z",
+    "datetime": "2026-08-26 18:00",
+    "parsed": {
+      "raw": "METAR WIEE 261800Z 05003KT 010V070 9999 FEW020 24/23 Q1013 NOSIG",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "261800Z",
+      "observationTime": "2026-08-26T18:00:00.000Z",
+      "wind": {
+        "direction": "050",
+        "speed": "03",
+        "unit": "KT",
+        "variable": false,
+        "variation": {
+          "from": "010",
+          "to": "070"
+        }
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "24",
+      "dewpoint": "23",
+      "altimeter": {
+        "value": "1013",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 01:00 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 261730Z 35004KT 9999 FEW020 25/23 Q1013 NOSIG",
+    "header": "SA WIEE 261730Z",
+    "datetime": "2026-08-26 17:30",
+    "parsed": {
+      "raw": "METAR WIEE 261730Z 35004KT 9999 FEW020 25/23 Q1013 NOSIG",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "261730Z",
+      "observationTime": "2026-08-26T17:30:00.000Z",
+      "wind": {
+        "direction": "350",
+        "speed": "04",
+        "unit": "KT",
+        "variable": false
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "25",
+      "dewpoint": "23",
+      "altimeter": {
+        "value": "1013",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 00:30 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 261700Z 36009KT 9999 FEW020 25/23 Q1013 NOSIG",
+    "header": "SA WIEE 261700Z",
+    "datetime": "2026-08-26 17:00",
+    "parsed": {
+      "raw": "METAR WIEE 261700Z 36009KT 9999 FEW020 25/23 Q1013 NOSIG",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "261700Z",
+      "observationTime": "2026-08-26T17:00:00.000Z",
+      "wind": {
+        "direction": "360",
+        "speed": "09",
+        "unit": "KT",
+        "variable": false
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "25",
+      "dewpoint": "23",
+      "altimeter": {
+        "value": "1013",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-27 00:00 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 261630Z 35008KT 9999 FEW020 25/24 Q1013 NOSIG",
+    "header": "SA WIEE 261630Z",
+    "datetime": "2026-08-26 16:30",
+    "parsed": {
+      "raw": "METAR WIEE 261630Z 35008KT 9999 FEW020 25/24 Q1013 NOSIG",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "261630Z",
+      "observationTime": "2026-08-26T16:30:00.000Z",
+      "wind": {
+        "direction": "350",
+        "speed": "08",
+        "unit": "KT",
+        "variable": false
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "020"
+        }
+      ],
+      "temperature": "25",
+      "dewpoint": "24",
+      "altimeter": {
+        "value": "1013",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-26 23:30 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
+  },
+  {
+    "station": "WIEE",
+    "raw": "METAR WIEE 261600Z 34004KT 9999 FEW026 25/24 Q1013 NOSIG",
+    "header": "SA WIEE 261600Z",
+    "datetime": "2026-08-26 16:00",
+    "parsed": {
+      "raw": "METAR WIEE 261600Z 34004KT 9999 FEW026 25/24 Q1013 NOSIG",
+      "type": "METAR",
+      "station": "WIEE",
+      "time": "261600Z",
+      "observationTime": "2026-08-26T16:00:00.000Z",
+      "wind": {
+        "direction": "340",
+        "speed": "04",
+        "unit": "KT",
+        "variable": false
+      },
+      "visibility": {
+        "value": "9999",
+        "unit": "m"
+      },
+      "weather": [],
+      "clouds": [
+        {
+          "type": "FEW",
+          "height": "026"
+        }
+      ],
+      "temperature": "25",
+      "dewpoint": "24",
+      "altimeter": {
+        "value": "1013",
+        "unit": "hPa"
+      },
+      "observationTimeWIB": "2026-08-26 23:00 WIB",
+      "trend": "NOSIG",
+      "auto": false,
+      "Remarks": []
+    }
   }
 ]

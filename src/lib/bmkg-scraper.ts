@@ -1,4 +1,3 @@
-import * as cheerio from 'cheerio';
 import { parseMetar, type MetarData } from './metar-parser';
 
 export interface MetarRecord {
@@ -9,15 +8,72 @@ export interface MetarRecord {
   parsed: MetarData;
 }
 
-const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+const USER_AGENT = 'BMKG-METAR-Viewer/1.0 (kelaikanobu6)';
 
-export async function fetchMetarData(
+// Fetch METAR from aviationweather.gov API (official NOAA API - free, no Cloudflare)
+async function fetchFromAviationWeather(
   stations: string[],
-  from: string, // YYYY-MM-DDTHH:MM
-  to: string,   // YYYY-MM-DDTHH:MM
+  hours: number = 12
+): Promise<MetarRecord[]> {
+  const ids = stations.join(',');
+  const url = `https://aviationweather.gov/api/data/metar?ids=${ids}&hours=${hours}&format=json`;
+  
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': USER_AGENT,
+      'Accept': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Aviation Weather API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const records: MetarRecord[] = [];
+
+  for (const item of data) {
+    const raw = item.rawOb || '';
+    if (!raw) continue;
+
+    const parsed = parseMetar(raw);
+    
+    // Convert observation time to WIB
+    const obsTime = item.reportTime ? new Date(item.reportTime) : new Date();
+    const wibTime = new Date(obsTime.getTime() + 7 * 60 * 60 * 1000);
+    
+    const year = wibTime.getUTCFullYear();
+    const month = String(wibTime.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(wibTime.getUTCDate()).padStart(2, '0');
+    const hour = String(wibTime.getUTCHours()).padStart(2, '0');
+    const min = String(wibTime.getUTCMinutes()).padStart(2, '0');
+    
+    parsed.observationTimeWIB = `${year}-${month}-${day} ${hour}:${min} WIB`;
+    parsed.observationTime = obsTime.toISOString();
+
+    records.push({
+      station: item.icaoId || parsed.station,
+      raw,
+      header: `${item.rawOb ? 'SA' : 'SP'} ${item.icaoId || ''} ${parsed.time}`,
+      datetime: `${obsTime.toISOString().replace('T', ' ').replace('Z', '').slice(0, 16)}`,
+      parsed,
+    });
+  }
+
+  return records;
+}
+
+// Fallback: Fetch from BMKG (may not work on Vercel due to Cloudflare)
+async function fetchFromBMKG(
+  stations: string[],
+  from: string,
+  to: string,
   includeMetar: boolean = true,
   includeSpeci: boolean = true
 ): Promise<MetarRecord[]> {
+  // Dynamic import cheerio to avoid build issues
+  const cheerio = await import('cheerio');
+  
   const formData = new URLSearchParams();
   formData.append('stasiun', stations.join(' '));
   formData.append('from', from);
@@ -30,29 +86,20 @@ export async function fetchMetarData(
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       'User-Agent': USER_AGENT,
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.5',
-      'Origin': 'https://web-aviation.bmkg.go.id',
-      'Referer': 'https://web-aviation.bmkg.go.id/web/metar_speci.php',
+      'Accept': 'text/html,application/xhtml+xml',
     },
     body: formData.toString(),
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch METAR data: ${response.status}`);
+    throw new Error(`BMKG error: ${response.status}`);
   }
 
   const html = await response.text();
-  
-  // Check for Cloudflare challenge
-  if (html.includes('challenge-platform') && !html.includes('<tbody>')) {
-    throw new Error('Cloudflare protection detected. Please try again or use a different network.');
-  }
-
   const $ = cheerio.load(html);
   const records: MetarRecord[] = [];
 
-  $('table tbody tr').each((_, row) => {
+  $('table tbody tr').each((_: number, row: any) => {
     const tds = $(row).find('td');
     if (tds.length >= 4) {
       const raw = $(tds[0]).text().trim();
@@ -70,6 +117,40 @@ export async function fetchMetarData(
   return records;
 }
 
+// Main function: Try aviationweather.gov first, fallback to BMKG
+export async function fetchMetarData(
+  stations: string[],
+  from: string, // YYYY-MM-DDTHH:MM
+  to: string,   // YYYY-MM-DDTHH:MM
+  includeMetar: boolean = true,
+  includeSpeci: boolean = true
+): Promise<MetarRecord[]> {
+  try {
+    // Calculate hours difference for aviationweather.gov API
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    const hoursDiff = Math.min(Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60)), 48);
+    
+    console.log('Fetching from aviationweather.gov API...');
+    const records = await fetchFromAviationWeather(stations, hoursDiff);
+    
+    if (records.length > 0) {
+      return records;
+    }
+    
+    // If no records from aviationweather, try BMKG
+    console.log('No records from aviationweather, trying BMKG...');
+    return await fetchFromBMKG(stations, from, to, includeMetar, includeSpeci);
+  } catch (error) {
+    console.error('Aviation Weather API failed, trying BMKG:', error);
+    try {
+      return await fetchFromBMKG(stations, from, to, includeMetar, includeSpeci);
+    } catch (bmkgError) {
+      throw new Error(`Both APIs failed. Aviation Weather: ${error instanceof Error ? error.message : 'unknown'}, BMKG: ${bmkgError instanceof Error ? bmkgError.message : 'unknown'}`);
+    }
+  }
+}
+
 // Popular Indonesian airport ICAO codes
 export const POPULAR_STATIONS = [
   { code: 'WIII', name: 'Jakarta (Soekarno-Hatta)' },
@@ -81,7 +162,5 @@ export const POPULAR_STATIONS = [
   { code: 'WIMM', name: 'Medan (Kualanamu)' },
   { code: 'WATT', name: 'Balikpapan (Sepinggan)' },
   { code: 'WAWS', name: 'Semarang (Ahmad Yani)' },
-  { code: 'WIII', name: 'Jakarta (Halim Perdanakusuma)' },
   { code: 'WARJ', name: 'Surabaya (Abdul Rachman Saleh)' },
-  { code: 'WADY', name: 'Yogyakarta (New Yogyakarta)' },
 ];
