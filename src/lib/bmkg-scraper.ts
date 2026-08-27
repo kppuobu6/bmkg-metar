@@ -25,11 +25,37 @@ async function fetchFromAviationWeather(
     },
   });
 
+  // 204 means no data available (valid request but no METARs)
+  if (response.status === 204) {
+    console.log('No METAR data available from aviationweather.gov');
+    return [];
+  }
+
   if (!response.ok) {
     throw new Error(`Aviation Weather API error: ${response.status}`);
   }
 
-  const data = await response.json();
+  const text = await response.text();
+  
+  // Handle empty or invalid response
+  if (!text || text.trim() === '') {
+    console.log('Empty response from aviationweather.gov');
+    return [];
+  }
+
+  let data: any[];
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    console.error('Failed to parse aviationweather.gov response:', text.substring(0, 200));
+    throw new Error('Invalid JSON response from aviationweather.gov');
+  }
+
+  if (!Array.isArray(data)) {
+    console.log('Unexpected response format from aviationweather.gov');
+    return [];
+  }
+
   const records: MetarRecord[] = [];
 
   for (const item of data) {
