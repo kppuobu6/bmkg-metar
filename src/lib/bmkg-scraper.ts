@@ -10,6 +10,10 @@ export interface MetarRecord {
 
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
+// Cloudflare Worker proxy URL (set in .env.local as BMKG_PROXY_URL)
+// Contoh: https://bmkg-proxy.your-name.workers.dev/metar
+const BMKG_PROXY_URL = process.env.BMKG_PROXY_URL || '';
+
 // Fetch METAR from aviationweather.gov API (official NOAA API - free, no Cloudflare)
 async function fetchFromAviationWeather(
   stations: string[],
@@ -107,17 +111,26 @@ async function fetchFromBMKG(
   if (includeMetar) formData.append('metar', 'SA');
   if (includeSpeci) formData.append('speci', 'SP');
 
-  const response = await fetch('https://web-aviation.bmkg.go.id/web/metar_speci.php', {
+  // Gunakan Cloudflare Worker proxy jika tersedia, fallback ke direct
+  const bmkgUrl = BMKG_PROXY_URL || 'https://web-aviation.bmkg.go.id/web/metar_speci.php';
+  
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/x-www-form-urlencoded',
+  };
+
+  // Jika direct ke BMKG (bukan proxy), tambahkan headers lengkap
+  if (!BMKG_PROXY_URL) {
+    headers['User-Agent'] = USER_AGENT;
+    headers['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8';
+    headers['Accept-Language'] = 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7';
+    headers['Accept-Encoding'] = 'gzip, deflate, br';
+    headers['Referer'] = 'https://web-aviation.bmkg.go.id/web/metar_speci.php';
+    headers['Origin'] = 'https://web-aviation.bmkg.go.id';
+  }
+
+  const response = await fetch(bmkgUrl, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'User-Agent': USER_AGENT,
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-      'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
-      'Accept-Encoding': 'gzip, deflate, br',
-      'Referer': 'https://web-aviation.bmkg.go.id/web/metar_speci.php',
-      'Origin': 'https://web-aviation.bmkg.go.id',
-    },
+    headers,
     body: formData.toString(),
   });
 
