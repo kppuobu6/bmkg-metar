@@ -8,7 +8,7 @@ export interface MetarRecord {
   parsed: MetarData;
 }
 
-const USER_AGENT = 'BMKG-METAR-Viewer/1.0 (kelaikanobu6)';
+const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
 // Fetch METAR from aviationweather.gov API (official NOAA API - free, no Cloudflare)
 async function fetchFromAviationWeather(
@@ -112,7 +112,11 @@ async function fetchFromBMKG(
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       'User-Agent': USER_AGENT,
-      'Accept': 'text/html,application/xhtml+xml',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Referer': 'https://web-aviation.bmkg.go.id/web/metar_speci.php',
+      'Origin': 'https://web-aviation.bmkg.go.id',
     },
     body: formData.toString(),
   });
@@ -151,6 +155,8 @@ export async function fetchMetarData(
   includeMetar: boolean = true,
   includeSpeci: boolean = true
 ): Promise<MetarRecord[]> {
+  let aviationError: string | null = null;
+  
   try {
     // Calculate hours difference for aviationweather.gov API
     const fromDate = new Date(from);
@@ -164,16 +170,20 @@ export async function fetchMetarData(
       return records;
     }
     
-    // If no records from aviationweather, try BMKG
-    console.log('No records from aviationweather, trying BMKG...');
-    return await fetchFromBMKG(stations, from, to, includeMetar, includeSpeci);
+    // aviationweather returned empty (no data for this station), not an error
+    console.log('No records from aviationweather for these stations, trying BMKG...');
   } catch (error) {
+    aviationError = error instanceof Error ? error.message : 'unknown';
     console.error('Aviation Weather API failed, trying BMKG:', error);
-    try {
-      return await fetchFromBMKG(stations, from, to, includeMetar, includeSpeci);
-    } catch (bmkgError) {
-      throw new Error(`Both APIs failed. Aviation Weather: ${error instanceof Error ? error.message : 'unknown'}, BMKG: ${bmkgError instanceof Error ? bmkgError.message : 'unknown'}`);
-    }
+  }
+  
+  // Try BMKG as fallback
+  try {
+    return await fetchFromBMKG(stations, from, to, includeMetar, includeSpeci);
+  } catch (bmkgError) {
+    const bmkgMsg = bmkgError instanceof Error ? bmkgError.message : 'unknown';
+    const aviationMsg = aviationError || 'No data available';
+    throw new Error(`Both APIs failed. Aviation Weather: ${aviationMsg}, BMKG: ${bmkgMsg}`);
   }
 }
 
@@ -189,4 +199,6 @@ export const POPULAR_STATIONS = [
   { code: 'WATT', name: 'Balikpapan (Sepinggan)' },
   { code: 'WAWS', name: 'Semarang (Ahmad Yani)' },
   { code: 'WARJ', name: 'Surabaya (Abdul Rachman Saleh)' },
+  { code: 'WIGG', name: 'Bengkulu (Fatmawati Soekarno)' },
+  { code: 'WIJJ', name: 'Jambi (Sultan Thaha)' },
 ];
