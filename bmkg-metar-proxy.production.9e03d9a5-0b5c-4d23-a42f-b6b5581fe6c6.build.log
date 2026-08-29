@@ -1,0 +1,113 @@
+2026-08-29T00:40:23.213Z	[build]   Finished TypeScript in 4.5s ...
+2026-08-29T00:40:23.214Z	[build] 
+2026-08-29T00:40:23.220Z	[build]   Collecting page data using 1 worker ...
+2026-08-29T00:40:23.220Z	[build] 
+2026-08-29T00:40:23.757Z	[build]   Generating static pages using 1 worker (0/6) ...
+2026-08-29T00:40:23.760Z	[build] 
+2026-08-29T00:40:23.776Z	[build]   Generating static pages using 1 worker (1/6) 
+2026-08-29T00:40:23.776Z	[build] 
+2026-08-29T00:40:23.779Z	[build]   Generating static pages using 1 worker (2/6) 
+2026-08-29T00:40:23.779Z	[build] 
+2026-08-29T00:40:23.907Z	[build]   Generating static pages using 1 worker (4/6) 
+2026-08-29T00:40:23.907Z	[build] 
+2026-08-29T00:40:23.910Z	[build] ✓ Generating static pages using 1 worker (6/6) in 154ms
+2026-08-29T00:40:23.911Z	[build] 
+2026-08-29T00:40:23.921Z	[build]   Finalizing page optimization ...
+2026-08-29T00:40:23.922Z	[build] 
+2026-08-29T00:40:24.185Z	[build] 
+2026-08-29T00:40:24.185Z	[build] 
+2026-08-29T00:40:24.186Z	[build] Route (app)
+2026-08-29T00:40:24.187Z	[build] ┌ ○ /
+2026-08-29T00:40:24.187Z	[build] ├ ○ /_not-found
+2026-08-29T00:40:24.189Z	[build] ├ ƒ /api/history
+2026-08-29T00:40:24.189Z	[build] └ ƒ /api/metar
+2026-08-29T00:40:24.189Z	[build] 
+2026-08-29T00:40:24.189Z	[build] 
+2026-08-29T00:40:24.189Z	[build] 
+2026-08-29T00:40:24.189Z	[build] ○  (Static)   prerendered as static content
+2026-08-29T00:40:24.189Z	[build] ƒ  (Dynamic)  server-rendered on demand
+2026-08-29T00:40:24.189Z	[build] 
+2026-08-29T00:40:24.190Z	[build] 
+2026-08-29T00:40:24.496Z	[build] 
+2026-08-29T00:40:24.497Z	[build] ┌──────────────────────────────┐
+2026-08-29T00:40:24.497Z	[build] │ OpenNext — Generating bundle │
+2026-08-29T00:40:24.497Z	[build] └──────────────────────────────┘
+2026-08-29T00:40:24.497Z	[build] 
+2026-08-29T00:40:24.497Z	[build] 
+2026-08-29T00:40:24.557Z	[build] Bundling middleware function...
+2026-08-29T00:40:24.557Z	[build] 
+2026-08-29T00:40:24.620Z	[build] Bundling static assets...
+2026-08-29T00:40:24.620Z	[build] 
+2026-08-29T00:40:24.625Z	[build] Bundling cache assets...
+2026-08-29T00:40:24.625Z	[build] 
+2026-08-29T00:40:24.633Z	[build] Building server function: default...
+2026-08-29T00:40:24.633Z	[build] 
+2026-08-29T00:40:29.802Z	[build] Applying code patches: 4.809s
+2026-08-29T00:40:29.808Z	[build] 
+2026-08-29T00:40:30.272Z	[build] # copyPackageTemplateFiles
+2026-08-29T00:40:30.274Z	[build] 
+2026-08-29T00:40:30.274Z	[build] ⚙️ Bundling the OpenNext server...
+2026-08-29T00:40:30.274Z	[build] 
+2026-08-29T00:40:30.275Z	[build] 
+2026-08-29T00:40:33.333Z	[build] Worker saved in `.open-next/worker.js` 🚀
+2026-08-29T00:40:33.334Z	[build] 
+2026-08-29T00:40:33.338Z	[build] OpenNext build complete.
+2026-08-29T00:40:33.339Z	[build] 
+2026-08-29T00:40:33.708Z	OpenNext project detected, calling `opennextjs-cloudflare deploy`
+2026-08-29T00:40:38.952Z	
+2026-08-29T00:40:38.952Z	┌──────────────────────────────┐
+2026-08-29T00:40:38.953Z	│ OpenNext — Cloudflare deploy │
+2026-08-29T00:40:38.953Z	└──────────────────────────────┘
+2026-08-29T00:40:38.953Z	
+2026-08-29T00:40:38.983Z	Using secrets defined in .dev.vars
+2026-08-29T00:40:39.503Z	Incremental cache does not need populating
+2026-08-29T00:40:39.504Z	Tag cache does not need populating
+2026-08-29T00:40:41.518Z	
+2026-08-29T00:40:41.518Z	 ⛅️ wrangler 4.127.1
+2026-08-29T00:40:41.518Z	────────────────────
+2026-08-29T00:40:41.527Z	
+2026-08-29T00:40:41.527Z	Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
+2026-08-29T00:40:43.353Z	🌀 Building list of assets...
+2026-08-29T00:40:43.354Z	✨ Read 32 files from the assets directory /opt/buildhome/repo/.open-next/assets
+2026-08-29T00:40:43.371Z	🌀 Starting asset upload...
+2026-08-29T00:40:44.987Z	🌀 Found 1 new or modified static asset to upload. Proceeding with upload...
+2026-08-29T00:40:44.987Z	+ /BUILD_ID
+2026-08-29T00:40:45.697Z	Uploaded 1 of 1 asset
+2026-08-29T00:40:45.699Z	✨ Success! Uploaded 1 file (25 already uploaded) (0.71 sec)
+2026-08-29T00:40:45.699Z	
+2026-08-29T00:40:45.937Z	Total Upload: 6341.16 KiB / gzip: 1470.04 KiB
+2026-08-29T00:40:46.713Z	Your Worker has access to the following bindings:
+2026-08-29T00:40:46.714Z	Binding                                     Resource      
+2026-08-29T00:40:46.714Z	env.WORKER_SELF_REFERENCE (bmkg-metar)      Worker        
+2026-08-29T00:40:46.714Z	env.IMAGES                                  Images        
+2026-08-29T00:40:46.714Z	env.ASSETS                                  Assets        
+2026-08-29T00:40:46.714Z	
+2026-08-29T00:40:46.715Z	
+2026-08-29T00:40:46.862Z	✘ [ERROR] A request to the Cloudflare API (/accounts/d9c6f25ed1be3633869c79635bab1435/workers/scripts/bmkg-metar-proxy/versions) failed.
+2026-08-29T00:40:46.862Z	
+2026-08-29T00:40:46.862Z	  Service binding 'WORKER_SELF_REFERENCE' references Worker 'bmkg-metar' which was not found. Verify the Worker exists in your account and that the service name in your configuration is correct. [code: 10143]
+2026-08-29T00:40:46.862Z	  To learn more about this error, visit: https://developers.cloudflare.com/workers/configuration/bindings/about-service-bindings/
+2026-08-29T00:40:46.862Z	
+2026-08-29T00:40:46.862Z	  
+2026-08-29T00:40:46.863Z	  If you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose
+2026-08-29T00:40:46.863Z	
+2026-08-29T00:40:46.863Z	
+2026-08-29T00:40:46.863Z	🪵  Logs were written to "/opt/buildhome/.config/.wrangler/logs/wrangler-2026-08-29_00-40-40_957.log"
+2026-08-29T00:40:46.863Z	ERROR Wrangler deploy command failed:
+2026-08-29T00:40:46.863Z	✘ [ERROR] A request to the Cloudflare API (/accounts/d9c6f25ed1be3633869c79635bab1435/workers/scripts/bmkg-metar-proxy/versions) failed.
+2026-08-29T00:40:46.863Z	
+2026-08-29T00:40:46.863Z	  Service binding 'WORKER_SELF_REFERENCE' references Worker 'bmkg-metar' which was not found. Verify the Worker exists in your account and that the service name in your configuration is correct. [code: 10143]
+2026-08-29T00:40:46.863Z	  To learn more about this error, visit: https://developers.cloudflare.com/workers/configuration/bindings/about-service-bindings/
+2026-08-29T00:40:46.864Z	
+2026-08-29T00:40:46.864Z	  
+2026-08-29T00:40:46.864Z	  If you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose
+2026-08-29T00:40:46.864Z	
+2026-08-29T00:40:46.864Z	
+2026-08-29T00:40:46.864Z	🪵  Logs were written to "/opt/buildhome/.config/.wrangler/logs/wrangler-2026-08-29_00-40-40_957.log"
+2026-08-29T00:40:46.864Z	
+2026-08-29T00:40:46.913Z	
+2026-08-29T00:40:46.968Z	✘ [ERROR] 
+2026-08-29T00:40:46.968Z	
+2026-08-29T00:40:46.968Z	
+2026-08-29T00:40:46.968Z	If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose
+2026-08-29T00:40:47.062Z	Failed: error occurred while running deploy command

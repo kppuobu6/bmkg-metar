@@ -94,8 +94,8 @@ export default {
       const isChallenge = html.includes('Just a moment') || html.includes('cf-challenge');
 
       if (!isChallenge && resp.ok && env.BMKG_CACHE) {
-        // Cache for 5 minutes
-        ctx.waitUntil(env.BMKG_CACHE.put(cacheKey, html, { expirationTtl: 300 }));
+        // Cache for 1 hour
+        ctx.waitUntil(env.BMKG_CACHE.put(cacheKey, html, { expirationTtl: 3600 }));
       }
 
       return new Response(html, {

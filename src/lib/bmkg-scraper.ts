@@ -93,57 +93,6 @@ async function fetchFromAviationWeather(
   return records;
 }
 
-// Fetch METAR data from BMKG HTML page
-// Requires: GET first to collect session cookies, then POST with them
-async function fetchBMKGRaw(
-  stations: string[],
-  from: string,
-  to: string,
-  includeMetar: boolean = true,
-  includeSpeci: boolean = true
-): Promise<string> {
-  const formData = new URLSearchParams();
-  formData.append('stasiun', stations.join(' '));
-  formData.append('from', from);
-  formData.append('to', to);
-  if (includeMetar) formData.append('metar', 'SA');
-  if (includeSpeci) formData.append('speci', 'SP');
-
-  const BMKG_URL = 'https://web-aviation.bmkg.go.id/web/metar_speci.php';
-
-  // Step 1: GET the page to collect session cookies (XSRF-TOKEN, aviation_session)
-  const getResp = await fetch(BMKG_URL, {
-    headers: {
-      'User-Agent': USER_AGENT,
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
-    },
-  });
-
-  const setCookies = getResp.headers.getSetCookie?.() || [];
-  const cookieHeader = setCookies.map(c => c.split(';')[0]).join('; ');
-
-  // Step 2: POST with cookies
-  const postResp = await fetch(BMKG_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'User-Agent': USER_AGENT,
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
-      'Referer': BMKG_URL,
-      'Origin': 'https://web-aviation.bmkg.go.id',
-      ...(cookieHeader ? { 'Cookie': cookieHeader } : {}),
-    },
-    body: formData.toString(),
-  });
-
-  if (!postResp.ok) {
-    throw new Error(`BMKG error: ${postResp.status}`);
-  }
-
-  return postResp.text();
-}
 
 // Parse METAR records from BMKG HTML
 function parseBMKGHtml(html: string, $: any): MetarRecord[] {
@@ -167,8 +116,8 @@ function parseBMKGHtml(html: string, $: any): MetarRecord[] {
   return records;
 }
 
-// Fallback: Fetch from BMKG
-// Tries direct first, then proxy if direct fails with Cloudflare challenge
+// Fetch METAR from BMKG via Cloudflare Worker proxy
+// The proxy handles cookie management and caching
 async function fetchFromBMKG(
   stations: string[],
   from: string,
@@ -177,52 +126,64 @@ async function fetchFromBMKG(
   includeSpeci: boolean = true
 ): Promise<MetarRecord[]> {
   const cheerio = await import('cheerio');
-  
-  // Try direct BMKG first
-  try {
-    console.log('Trying direct BMKG...');
-    const html = await fetchBMKGRaw(stations, from, to, includeMetar, includeSpeci);
-    
-    // Check if response is Cloudflare challenge page
-    if (html.includes('Just a moment') || html.includes('cf-challenge')) {
-      console.log('BMKG returned Cloudflare challenge, trying proxy...');
-    } else {
-      const $ = cheerio.load(html);
-      const records = parseBMKGHtml(html, $);
-      if (records.length > 0) return records;
-      console.log('BMKG returned no records from direct, trying proxy...');
-    }
-  } catch (err) {
-    console.error('Direct BMKG failed:', err instanceof Error ? err.message : err);
+
+  if (!BMKG_PROXY_URL) {
+    throw new Error('BMKG_PROXY_URL not configured');
   }
 
-  // Fallback to proxy
-  if (BMKG_PROXY_URL) {
-    console.log('Trying BMKG via proxy...');
-    const formData = new URLSearchParams();
-    formData.append('stasiun', stations.join(' '));
-    formData.append('from', from);
-    formData.append('to', to);
-    if (includeMetar) formData.append('metar', 'SA');
-    if (includeSpeci) formData.append('speci', 'SP');
+  const formData = new URLSearchParams();
+  formData.append('stasiun', stations.join(' '));
+  formData.append('from', from);
+  formData.append('to', to);
+  if (includeMetar) formData.append('metar', 'SA');
+  if (includeSpeci) formData.append('speci', 'SP');
 
-    const response = await fetch(BMKG_PROXY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: formData.toString(),
-    });
+  // Try up to 2 times (proxy may intermittently fail)
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    console.log(`BMKG proxy attempt ${attempt}/2...`);
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-    if (!response.ok) {
-      throw new Error(`BMKG proxy error: ${response.status}`);
+      const response = await fetch(BMKG_PROXY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData.toString(),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        console.error(`BMKG proxy returned ${response.status} on attempt ${attempt}`);
+        if (attempt < 2) {
+          await new Promise(r => setTimeout(r, 1000));
+          continue;
+        }
+        throw new Error(`BMKG proxy error: ${response.status}`);
+      }
+
+      const html = await response.text();
+      if (html.includes('Just a moment') || html.includes('cf-challenge')) {
+        console.error(`BMKG proxy returned Cloudflare challenge on attempt ${attempt}`);
+        if (attempt < 2) {
+          await new Promise(r => setTimeout(r, 1000));
+          continue;
+        }
+        throw new Error('BMKG proxy blocked by Cloudflare challenge');
+      }
+
+      const $ = cheerio.load(html);
+      const records = parseBMKGHtml(html, $);
+      console.log(`BMKG proxy returned ${records.length} records`);
+      return records;
+    } catch (err) {
+      if (attempt < 2) {
+        console.error(`BMKG proxy attempt ${attempt} failed:`, err instanceof Error ? err.message : err);
+        await new Promise(r => setTimeout(r, 1000));
+        continue;
+      }
+      throw err;
     }
-
-    const html = await response.text();
-    if (html.includes('Just a moment') || html.includes('cf-challenge')) {
-      throw new Error('BMKG proxy also blocked by Cloudflare challenge');
-    }
-
-    const $ = cheerio.load(html);
-    return parseBMKGHtml(html, $);
   }
 
   throw new Error('All BMKG sources failed');
