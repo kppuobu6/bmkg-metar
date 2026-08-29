@@ -94,6 +94,7 @@ async function fetchFromAviationWeather(
 }
 
 // Fetch METAR data from BMKG HTML page
+// Requires: GET first to collect session cookies, then POST with them
 async function fetchBMKGRaw(
   stations: string[],
   from: string,
@@ -109,28 +110,39 @@ async function fetchBMKGRaw(
   if (includeSpeci) formData.append('speci', 'SP');
 
   const BMKG_URL = 'https://web-aviation.bmkg.go.id/web/metar_speci.php';
-  
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/x-www-form-urlencoded',
-    'User-Agent': USER_AGENT,
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-    'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Referer': BMKG_URL,
-    'Origin': 'https://web-aviation.bmkg.go.id',
-  };
 
-  const response = await fetch(BMKG_URL, {
+  // Step 1: GET the page to collect session cookies (XSRF-TOKEN, aviation_session)
+  const getResp = await fetch(BMKG_URL, {
+    headers: {
+      'User-Agent': USER_AGENT,
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
+    },
+  });
+
+  const setCookies = getResp.headers.getSetCookie?.() || [];
+  const cookieHeader = setCookies.map(c => c.split(';')[0]).join('; ');
+
+  // Step 2: POST with cookies
+  const postResp = await fetch(BMKG_URL, {
     method: 'POST',
-    headers,
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': USER_AGENT,
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
+      'Referer': BMKG_URL,
+      'Origin': 'https://web-aviation.bmkg.go.id',
+      ...(cookieHeader ? { 'Cookie': cookieHeader } : {}),
+    },
     body: formData.toString(),
   });
 
-  if (!response.ok) {
-    throw new Error(`BMKG error: ${response.status}`);
+  if (!postResp.ok) {
+    throw new Error(`BMKG error: ${postResp.status}`);
   }
 
-  return response.text();
+  return postResp.text();
 }
 
 // Parse METAR records from BMKG HTML

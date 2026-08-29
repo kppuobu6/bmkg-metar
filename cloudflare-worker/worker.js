@@ -1,9 +1,8 @@
 // Cloudflare Worker: BMKG METAR Proxy
-// Deploy this to Cloudflare Workers (free tier: 100k requests/day)
-// Usage: POST https://your-worker.workers.dev/metar with form data
+// Requires: GET first to collect session cookies, then POST with them
 
 const BMKG_URL = 'https://web-aviation.bmkg.go.id/web/metar_speci.php';
-const ALLOWED_ORIGINS = ['*']; // Ganti dengan domain production kamu untuk keamanan
+const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
 export default {
   async fetch(request, env, ctx) {
@@ -19,7 +18,7 @@ export default {
       return new Response(null, { status: 204, headers: corsHeaders });
     }
 
-    // Hanya terima POST
+    // Only accept POST
     if (request.method !== 'POST') {
       return new Response(JSON.stringify({ error: 'Method not allowed' }), {
         status: 405,
@@ -28,30 +27,39 @@ export default {
     }
 
     try {
-      // Ambil body dari request
       const body = await request.text();
 
-      // Forward ke BMKG dengan headers yang tepat
-      const bmkgResponse = await fetch(BMKG_URL, {
+      // Step 1: GET the page to collect session cookies
+      const getResp = await fetch(BMKG_URL, {
+        headers: {
+          'User-Agent': USER_AGENT,
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
+        },
+      });
+
+      const cookies = getResp.headers.getSetCookie?.() || [];
+      const cookieHeader = cookies.map(c => c.split(';')[0]).join('; ');
+
+      // Step 2: POST with cookies
+      const postResp = await fetch(BMKG_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-          'Accept':
-            'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+          'User-Agent': USER_AGENT,
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
           'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
-          Referer: BMKG_URL,
-          Origin: 'https://web-aviation.bmkg.go.id',
+          'Referer': BMKG_URL,
+          'Origin': 'https://web-aviation.bmkg.go.id',
+          ...(cookieHeader ? { 'Cookie': cookieHeader } : {}),
         },
         body,
       });
 
-      // Return response dari BMKG
-      const html = await bmkgResponse.text();
+      const html = await postResp.text();
 
       return new Response(html, {
-        status: bmkgResponse.status,
+        status: postResp.status,
         headers: {
           ...corsHeaders,
           'Content-Type': 'text/html; charset=utf-8',
