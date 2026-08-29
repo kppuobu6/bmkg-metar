@@ -13,6 +13,11 @@ const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
 // Cloudflare Worker proxy URL (set in .env.local as BMKG_PROXY_URL)
 const BMKG_PROXY_URL = process.env.BMKG_PROXY_URL || '';
 
+// SkyLink API key (set in .env.local as SKYLINK_API_KEY)
+// Using direct API via polar.sh: https://data.skylinkapi.com
+const SKYLINK_API_KEY = process.env.SKYLINK_API_KEY || '';
+const SKYLINK_BASE_URL = 'https://data.skylinkapi.com/v3.1';
+
 // Fetch METAR from aviationweather.gov API (official NOAA API - free, no Cloudflare)
 async function fetchFromAviationWeather(
   stations: string[],
@@ -87,6 +92,74 @@ async function fetchFromAviationWeather(
       datetime: `${obsTime.toISOString().replace('T', ' ').replace('Z', '').slice(0, 16)}`,
       parsed,
     });
+  }
+
+  return records;
+}
+
+
+// Fetch METAR from SkyLink API (via polar.sh direct API)
+// Free tier: 1,000 requests/month
+async function fetchFromSkyLink(
+  stations: string[]
+): Promise<MetarRecord[]> {
+  if (!SKYLINK_API_KEY) {
+    throw new Error('SKYLINK_API_KEY not configured');
+  }
+
+  const records: MetarRecord[] = [];
+
+  // SkyLink only supports one station per request
+  for (const station of stations) {
+    try {
+      const url = `${SKYLINK_BASE_URL}/weather/metar/${station}`;
+      
+      const response = await fetch(url, {
+        headers: {
+          'x-api-key': SKYLINK_API_KEY,
+        },
+      });
+
+      if (!response.ok) {
+        console.error(`SkyLink API error for ${station}: ${response.status}`);
+        continue;
+      }
+
+      const data = await response.json();
+      
+      // Check if data is available
+      if (!data.raw || data.detail) {
+        console.log(`SkyLink: No data for ${station} - ${data.detail || 'empty'}`);
+        continue;
+      }
+
+      const parsed = parseMetar(data.raw);
+      
+      // SkyLink returns ISO time, convert to WIB
+      const obsTime = data.timestamp ? new Date(data.timestamp) : new Date();
+      const wibTime = new Date(obsTime.getTime() + 7 * 60 * 60 * 1000);
+      
+      const year = wibTime.getUTCFullYear();
+      const month = String(wibTime.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(wibTime.getUTCDate()).padStart(2, '0');
+      const hour = String(wibTime.getUTCHours()).padStart(2, '0');
+      const min = String(wibTime.getUTCMinutes()).padStart(2, '0');
+      
+      parsed.observationTimeWIB = `${year}-${month}-${day} ${hour}:${min} WIB`;
+      parsed.observationTime = obsTime.toISOString();
+
+      records.push({
+        station: data.icao || station,
+        raw: data.raw,
+        header: `SA ${data.icao || station} ${parsed.time}`,
+        datetime: `${obsTime.toISOString().replace('T', ' ').replace('Z', '').slice(0, 16)}`,
+        parsed,
+      });
+
+      console.log(`SkyLink: Got METAR for ${station}`);
+    } catch (err) {
+      console.error(`SkyLink failed for ${station}:`, err instanceof Error ? err.message : err);
+    }
   }
 
   return records;
@@ -213,7 +286,7 @@ async function fetchFromBMKG(
   throw new Error('All BMKG sources failed');
 }
 
-// Main function: Try aviationweather.gov first, fallback to BMKG
+// Main function: Try aviationweather.gov → SkyLink → BMKG
 export async function fetchMetarData(
   stations: string[],
   from: string, // YYYY-MM-DDTHH:MM
@@ -222,9 +295,10 @@ export async function fetchMetarData(
   includeSpeci: boolean = true
 ): Promise<MetarRecord[]> {
   let aviationError: string | null = null;
+  let skylinkError: string | null = null;
   
+  // Step 1: Try aviationweather.gov (free, reliable)
   try {
-    // Calculate hours difference for aviationweather.gov API
     const fromDate = new Date(from);
     const toDate = new Date(to);
     const hoursDiff = Math.min(Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60)), 48);
@@ -236,20 +310,36 @@ export async function fetchMetarData(
       return records;
     }
     
-    // aviationweather returned empty (no data for this station), not an error
-    console.log('No records from aviationweather for these stations, trying BMKG...');
+    console.log('No records from aviationweather for these stations, trying SkyLink...');
   } catch (error) {
     aviationError = error instanceof Error ? error.message : 'unknown';
-    console.error('Aviation Weather API failed, trying BMKG:', error);
+    console.error('Aviation Weather API failed, trying SkyLink:', error);
   }
   
-  // Try BMKG as fallback
+  // Step 2: Try SkyLink API (free tier: 1,000/month)
+  try {
+    console.log('Fetching from SkyLink API...');
+    const records = await fetchFromSkyLink(stations);
+    
+    if (records.length > 0) {
+      console.log(`SkyLink returned ${records.length} records`);
+      return records;
+    }
+    
+    console.log('No records from SkyLink for these stations, trying BMKG...');
+  } catch (error) {
+    skylinkError = error instanceof Error ? error.message : 'unknown';
+    console.error('SkyLink API failed, trying BMKG:', error);
+  }
+  
+  // Step 3: Try BMKG as final fallback
   try {
     return await fetchFromBMKG(stations, from, to, includeMetar, includeSpeci);
   } catch (bmkgError) {
     const bmkgMsg = bmkgError instanceof Error ? bmkgError.message : 'unknown';
     const aviationMsg = aviationError || 'No data available';
-    throw new Error(`Both APIs failed. Aviation Weather: ${aviationMsg}, BMKG: ${bmkgMsg}`);
+    const skylinkMsg = skylinkError || 'No data available';
+    throw new Error(`All APIs failed. Aviation Weather: ${aviationMsg}, SkyLink: ${skylinkMsg}, BMKG: ${bmkgMsg}`);
   }
 }
 
