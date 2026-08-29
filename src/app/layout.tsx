@@ -10,9 +10,6 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "BMKG Metar | Kelaikudaraan V2",
   description: "Real-time METAR/SPECI data from BMKG Indonesia with decoded weather reports",
-  icons: {
-    icon: "/favicon.png",
-  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
