@@ -16,7 +16,21 @@ export async function GET(request: NextRequest) {
 
   try {
     const records = await fetchMetarData(stations, from, to);
-    const response = NextResponse.json({ records, count: records.length, fetchedAt: new Date().toISOString() });
+    const response = NextResponse.json({
+      records,
+      count: records.length,
+      fetchedAt: new Date().toISOString(),
+      // Include debug info in non-production for troubleshooting
+      ...(process.env.NODE_ENV !== 'production' ? {
+        debug: {
+          stations,
+          from,
+          to,
+          bmkgProxyConfigured: !!process.env.BMKG_PROXY_URL,
+          skylinkConfigured: !!process.env.SKYLINK_API_KEY,
+        },
+      } : {}),
+    });
     // Disable caching
     response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     response.headers.set('Pragma', 'no-cache');
@@ -26,7 +40,7 @@ export async function GET(request: NextRequest) {
     console.error('Error fetching METAR data:', error);
     const message = error instanceof Error ? error.message : 'Failed to fetch METAR data';
     return NextResponse.json(
-      { error: message },
+      { error: message, stations, from, to },
       { status: 500 }
     );
   }
@@ -45,7 +59,19 @@ export async function POST(request: NextRequest) {
     }
 
     const records = await fetchMetarData(stations, from, to, includeMetar, includeSpeci);
-    return NextResponse.json({ records, count: records.length });
+    return NextResponse.json({
+      records,
+      count: records.length,
+      ...(process.env.NODE_ENV !== 'production' ? {
+        debug: {
+          stations,
+          from,
+          to,
+          bmkgProxyConfigured: !!process.env.BMKG_PROXY_URL,
+          skylinkConfigured: !!process.env.SKYLINK_API_KEY,
+        },
+      } : {}),
+    });
   } catch (error) {
     console.error('Error fetching METAR data:', error);
     const message = error instanceof Error ? error.message : 'Failed to fetch METAR data';

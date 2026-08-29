@@ -69,6 +69,26 @@ function hasTableData(html) {
   return html.includes('<table') && html.includes('<td');
 }
 
+// Validate that HTML contains actual METAR/SPECI data, not just an empty table
+function hasValidMetarContent(html) {
+  // Must have at least one METAR or SPECI record
+  return /METAR\s+[WA]{2}[A-Z]{2}/.test(html) || /SPECI\s+[WA]{2}[A-Z]{2}/.test(html);
+}
+
+// Check if HTML looks like an error page or redirect
+function isErrorPage(html) {
+  const lower = html.toLowerCase();
+  return (
+    lower.includes('error') && lower.includes('not found') ||
+    lower.includes('404') && lower.includes('page') ||
+    lower.includes('maintenance') ||
+    lower.includes('sedang perbaikan') ||
+    lower.includes('server error') ||
+    lower.includes('502 bad gateway') ||
+    lower.includes('503 service')
+  );
+}
+
 export default {
   async fetch(request, env, ctx) {
     const corsHeaders = {
@@ -99,11 +119,37 @@ export default {
           const resp = await fetchBMKGWithCookies(body);
           const html = await resp.text();
 
-          if (!isCloudflareChallenge(html) && resp.ok && hasTableData(html)) {
-            // Fresh data! Cache for 1 hour
+          if (!resp.ok) {
+            console.error(`BMKG returned ${resp.status} on attempt ${attempt}`);
+            if (attempt < 2) await new Promise(r => setTimeout(r, 500));
+            continue;
+          }
+
+          if (isCloudflareChallenge(html)) {
+            console.error(`BMKG returned Cloudflare challenge on attempt ${attempt}`);
+            if (attempt < 2) await new Promise(r => setTimeout(r, 500));
+            continue;
+          }
+
+          if (isErrorPage(html)) {
+            console.error(`BMKG returned error page on attempt ${attempt}`);
+            if (attempt < 2) await new Promise(r => setTimeout(r, 500));
+            continue;
+          }
+
+          if (!hasTableData(html)) {
+            console.error(`BMKG returned HTML without table on attempt ${attempt}`);
+            if (attempt < 2) await new Promise(r => setTimeout(r, 500));
+            continue;
+          }
+
+          if (!hasValidMetarContent(html)) {
+            console.error(`BMKG returned table but no METAR/SPECI content on attempt ${attempt}`);
+            // Still cache this — it might be a valid "no data" response for this time range
+            // But mark it with a shorter TTL
             if (env.BMKG_CACHE) {
               const putPromises = cacheKeys.map(key =>
-                env.BMKG_CACHE.put(key, html, { expirationTtl: 3600 })
+                env.BMKG_CACHE.put(key, html, { expirationTtl: 300 }) // 5 min for empty results
               );
               await Promise.all(putPromises);
             }
@@ -113,23 +159,49 @@ export default {
                 ...corsHeaders,
                 'Content-Type': 'text/html; charset=utf-8',
                 'X-Cache': 'MISS',
-                'X-Source': 'live',
+                'X-Source': 'live-empty',
               },
             });
           }
-        } catch (err) {
-          if (attempt < 2) {
-            await new Promise(r => setTimeout(r, 500));
+
+          // Fresh valid data! Cache for 1 hour
+          if (env.BMKG_CACHE) {
+            const putPromises = cacheKeys.map(key =>
+              env.BMKG_CACHE.put(key, html, { expirationTtl: 3600 })
+            );
+            await Promise.all(putPromises);
           }
+          return new Response(html, {
+            status: 200,
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'text/html; charset=utf-8',
+              'X-Cache': 'MISS',
+              'X-Source': 'live',
+            },
+          });
+        } catch (err) {
+          console.error(`BMKG fetch attempt ${attempt} failed:`, err.message);
+          if (attempt < 2) await new Promise(r => setTimeout(r, 500));
         }
       }
 
       // Step 2: BMKG failed — serve cached data (stale-while-revalidate)
       if (env.BMKG_CACHE) {
-        // Try to find any cached data for these stations
         for (const key of cacheKeys) {
           const cached = await env.BMKG_CACHE.get(key);
           if (cached) {
+            // Validate cached content before serving
+            if (isCloudflareChallenge(cached) || isErrorPage(cached)) {
+              console.error(`Cached content for ${key} is invalid (challenge/error page), skipping`);
+              await env.BMKG_CACHE.delete(key);
+              continue;
+            }
+            if (!hasTableData(cached)) {
+              console.error(`Cached content for ${key} has no table data, skipping`);
+              await env.BMKG_CACHE.delete(key);
+              continue;
+            }
             return new Response(cached, {
               status: 200,
               headers: {
