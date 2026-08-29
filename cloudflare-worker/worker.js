@@ -1,5 +1,5 @@
-// Cloudflare Worker: BMKG METAR Proxy with smart KV Cache
-// Caches per-station per-day so any time range hits cache
+// Cloudflare Worker: BMKG METAR Proxy
+// Always fetches fresh data; caches only as fallback when BMKG is blocked
 
 const BMKG_URL = 'https://web-aviation.bmkg.go.id/web/metar_speci.php';
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
@@ -12,12 +12,11 @@ function normalizeBody(rawBody) {
   }
 }
 
-// Extract station names and today's date for broad cache key
 function extractStationsAndDate(body) {
   const params = new URLSearchParams(body);
   const stasiun = params.get('stasiun') || '';
   const from = params.get('from') || '';
-  const today = from.substring(0, 10); // YYYY-MM-DD
+  const today = from.substring(0, 10);
   return { stations: stasiun.trim(), date: today };
 }
 
@@ -81,71 +80,52 @@ export default {
     try {
       const rawBody = await request.text();
       const body = normalizeBody(rawBody);
-
-      // Generate cache keys
-      const exactKey = `metar:${body}`;
       const { stations, date } = extractStationsAndDate(body);
       const broadKey = `metar:${stations}:${date}`;
 
-      // Step 1: Check exact cache, then broad cache
-      let cached = null;
-      if (env.BMKG_CACHE) {
-        cached = await env.BMKG_CACHE.get(exactKey);
-        if (!cached) {
-          cached = await env.BMKG_CACHE.get(broadKey);
-        }
-      }
-
-      // Step 2: Try to fetch fresh data from BMKG
-      let freshHtml = null;
-      let freshOk = false;
-
+      // Step 1: ALWAYS try fresh from BMKG first
       try {
         const resp = await fetchBMKGWithCookies(body);
         const html = await resp.text();
 
         if (!isCloudflareChallenge(html) && resp.ok && html.includes('<table')) {
-          freshHtml = html;
-          freshOk = true;
-
-          // Cache for 24 hours under both keys
+          // Fresh data! Cache as fallback (30 min) and return
           if (env.BMKG_CACHE) {
-            ctx.waitUntil(env.BMKG_CACHE.put(exactKey, html, { expirationTtl: 86400 }));
-            ctx.waitUntil(env.BMKG_CACHE.put(broadKey, html, { expirationTtl: 86400 }));
+            ctx.waitUntil(env.BMKG_CACHE.put(broadKey, html, { expirationTtl: 1800 }));
           }
+          return new Response(html, {
+            status: 200,
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'text/html; charset=utf-8',
+              'X-Cache': 'MISS',
+              'X-Source': 'live',
+            },
+          });
         }
       } catch (err) {
-        // BMKG fetch failed, will use cached data if available
+        // BMKG fetch failed, fall through to cache
       }
 
-      // Step 3: Return best available data
-      if (freshOk && freshHtml) {
-        return new Response(freshHtml, {
-          status: 200,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'text/html; charset=utf-8',
-            'X-Cache': cached ? 'STALE' : 'MISS',
-            'X-Source': 'live',
-          },
-        });
-      }
-
-      if (cached) {
-        return new Response(cached, {
-          status: 200,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'text/html; charset=utf-8',
-            'X-Cache': 'HIT',
-            'X-Source': 'cached',
-          },
-        });
+      // Step 2: BMKG failed — serve cached data as fallback
+      if (env.BMKG_CACHE) {
+        const cached = await env.BMKG_CACHE.get(broadKey);
+        if (cached) {
+          return new Response(cached, {
+            status: 200,
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'text/html; charset=utf-8',
+              'X-Cache': 'HIT',
+              'X-Source': 'cached',
+            },
+          });
+        }
       }
 
       // No cache and BMKG failed
       return new Response(
-        JSON.stringify({ error: 'BMKG temporarily unavailable and no cached data' }),
+        JSON.stringify({ error: 'BMKG temporarily unavailable' }),
         {
           status: 503,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
