@@ -29,7 +29,7 @@ export const AIRPORT_NAMES: Record<string, string> = {
   WIME: "Bandar Udara Depati Parbo - Kerinci",
   WIMG: "Bandar Udara Tabing - Padang",
   WIBB: "Bandar Udara Internasional Sultan Syarif Kasim II - Pekanbaru",
-  WIPK: "Bandar Udara Depati Amir - Pangkal Pinang",
+  WIKK: "Bandar Udara Depati Amir - Pangkal Pinang",
   WIEE: "Bandar Udara Internasional Minangkabau - Padang",
   WIPB: "Bandar Udara Internasional Sultan Badaruddin II - Palembang",
   WIPP: "Bandar Udara Internasional Sultan Mahmud Badaruddin II - Palembang",
