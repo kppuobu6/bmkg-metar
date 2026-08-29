@@ -72,5 +72,5 @@ export async function GET() {
     results.tests.push({ name: 'direct-bmkg-get', error: err.message });
   }
 
-  return NextResponse.json(results, { pretty: true });
+  return NextResponse.json(results);
 }
