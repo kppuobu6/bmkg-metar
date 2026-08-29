@@ -2,3 +2,7 @@ name = "bmkg-proxy"
 main = "worker.js"
 compatibility_date = "2024-11-01"
 compatibility_flags = ["nodejs_compat"]
+
+[[kv_namespaces]]
+binding = "BMKG_CACHE"
+id = "4f499b214d6f41d294d314525922962d"
