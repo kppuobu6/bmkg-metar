@@ -444,7 +444,31 @@ function getCacheKey(stations: string[], from: string, to: string): string {
   return `${stations.sort().join(',')}:${from}:${to}`;
 }
 
-// Main function: Try aviationweather.gov → SkyLink → BMKG
+// Get the latest observation time from a set of records
+function getLatestObsTime(records: MetarRecord[]): number {
+  let latest = 0;
+  for (const r of records) {
+    const t = r.parsed.observationTime ? new Date(r.parsed.observationTime).getTime() : 0;
+    if (t > latest) latest = t;
+  }
+  return latest;
+}
+
+// Merge records from multiple sources, deduplicating by station + time
+function mergeRecords(...sources: MetarRecord[][]): MetarRecord[] {
+  const seen = new Map<string, MetarRecord>();
+  for (const source of sources) {
+    for (const record of source) {
+      const key = `${record.station}:${record.parsed.time}`;
+      if (!seen.has(key)) {
+        seen.set(key, record);
+      }
+    }
+  }
+  return Array.from(seen.values());
+}
+
+// Main function: Fetch from all sources in parallel, return the freshest data
 export async function fetchMetarData(
   stations: string[],
   from: string, // YYYY-MM-DDTHH:MM
@@ -460,92 +484,66 @@ export async function fetchMetarData(
     return cached.data;
   }
 
-  const errors: string[] = [];
-  const debugInfo: string[] = [];
-  
-  // Step 1: Try aviationweather.gov (free, reliable)
-  try {
-    const fromDate = new Date(from);
-    const toDate = new Date(to);
-    const hoursDiff = Math.min(Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60)), 48);
+  const fromDate = new Date(from);
+  const toDate = new Date(to);
+  const hoursDiff = Math.min(Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60)), 48);
+
+  // Fetch from all sources in parallel for maximum freshness
+  const [aviationResult, skylinkResult, bmkgResult] = await Promise.allSettled([
+    fetchFromAviationWeather(stations, hoursDiff),
+    SKYLINK_API_KEY ? fetchFromSkyLink(stations) : Promise.resolve([]),
+    BMKG_PROXY_URL ? fetchFromBMKG(stations, from, to, includeMetar, includeSpeci) : Promise.resolve([]),
+  ]);
+
+  const aviationRecords = aviationResult.status === 'fulfilled' ? aviationResult.value : [];
+  const skylinkRecords = skylinkResult.status === 'fulfilled' ? skylinkResult.value : [];
+  const bmkgRecords = bmkgResult.status === 'fulfilled' ? bmkgResult.value : [];
+
+  console.log(`[METAR] aviationweather.gov: ${aviationRecords.length}, SkyLink: ${skylinkRecords.length}, BMKG: ${bmkgRecords.length}`);
+
+  // Determine which source has the freshest data
+  const aviationLatest = getLatestObsTime(aviationRecords);
+  const bmkgLatest = getLatestObsTime(bmkgRecords);
+
+  let records: MetarRecord[];
+
+  if (bmkgLatest > aviationLatest && bmkgRecords.length > 0) {
+    // BMKG has fresher data — use BMKG as primary, merge any extras from aviation
+    console.log(`[METAR] BMKG is fresher (${new Date(bmkgLatest).toISOString()} vs ${new Date(aviationLatest).toISOString()})`);
+    records = mergeRecords(bmkgRecords, aviationRecords, skylinkRecords);
+  } else if (aviationRecords.length > 0) {
+    // aviationweather.gov has fresher or equal data
+    console.log(`[METAR] aviationweather.gov is primary source`);
+    records = mergeRecords(aviationRecords, bmkgRecords, skylinkRecords);
+  } else if (bmkgRecords.length > 0) {
+    // Only BMKG has data
+    records = bmkgRecords;
+  } else if (skylinkRecords.length > 0) {
+    // Only SkyLink has data
+    records = skylinkRecords;
+  } else {
+    // No data from any source
+    const errors: string[] = [];
+    if (aviationResult.status === 'rejected') errors.push(`aviationweather.gov: ${aviationResult.reason?.message || 'unknown'}`);
+    if (skylinkResult.status === 'rejected') errors.push(`SkyLink: ${skylinkResult.reason?.message || 'unknown'}`);
+    if (bmkgResult.status === 'rejected') errors.push(`BMKG: ${bmkgResult.reason?.message || 'unknown'}`);
     
-    debugInfo.push('Trying aviationweather.gov...');
-    const records = await fetchFromAviationWeather(stations, hoursDiff);
-    
-    if (records.length > 0) {
-      debugInfo.push(`aviationweather.gov: ${records.length} records`);
-      console.log(`[METAR] aviationweather.gov returned ${records.length} records for ${stations.join(',')}`);
-      
-      // Cache the result
-      responseCache.set(cacheKey, { data: records, expiry: Date.now() + CACHE_TTL_MS });
-      return records;
-    }
-    
-    debugInfo.push('aviationweather.gov: no records (empty response)');
-    console.log('No records from aviationweather for these stations, trying SkyLink...');
-  } catch (error) {
-    const errMsg = error instanceof Error ? error.message : 'unknown';
-    errors.push(`aviationweather.gov: ${errMsg}`);
-    debugInfo.push(`aviationweather.gov: FAILED - ${errMsg}`);
-    console.error('Aviation Weather API failed, trying SkyLink:', error);
+    throw new Error(`No METAR data available. Errors: ${errors.join('; ') || 'all sources returned empty'}`);
   }
-  
-  // Step 2: Try SkyLink API (free tier: 1,000/month)
-  try {
-    debugInfo.push('Trying SkyLink...');
-    const records = await fetchFromSkyLink(stations);
-    
-    if (records.length > 0) {
-      debugInfo.push(`SkyLink: ${records.length} records`);
-      console.log(`SkyLink returned ${records.length} records`);
-      
-      // Cache the result
-      responseCache.set(cacheKey, { data: records, expiry: Date.now() + CACHE_TTL_MS });
-      return records;
-    }
-    
-    debugInfo.push('SkyLink: no records (empty response)');
-    console.log('No records from SkyLink for these stations, trying BMKG...');
-  } catch (error) {
-    const errMsg = error instanceof Error ? error.message : 'unknown';
-    errors.push(`SkyLink: ${errMsg}`);
-    debugInfo.push(`SkyLink: FAILED - ${errMsg}`);
-    console.error('SkyLink API failed, trying BMKG:', error);
-  }
-  
-  // Step 3: Try BMKG as final fallback
-  try {
-    debugInfo.push('Trying BMKG proxy...');
-    const records = await fetchFromBMKG(stations, from, to, includeMetar, includeSpeci);
-    
-    if (records.length > 0) {
-      debugInfo.push(`BMKG: ${records.length} records`);
-      console.log(`[METAR] BMKG returned ${records.length} records for ${stations.join(',')}`);
-      
-      // Cache the result
-      responseCache.set(cacheKey, { data: records, expiry: Date.now() + CACHE_TTL_MS });
-      return records;
-    }
-    
-    debugInfo.push('BMKG: no records (empty table)');
-  } catch (bmkgError) {
-    const bmkgMsg = bmkgError instanceof Error ? bmkgError.message : 'unknown';
-    errors.push(`BMKG: ${bmkgMsg}`);
-    debugInfo.push(`BMKG: FAILED - ${bmkgMsg}`);
-  }
-  
-  // All sources failed — throw with detailed error info
-  const errorDetail = [
-    `All APIs failed for stations: ${stations.join(',')}`,
-    `Time range: ${from} to ${to}`,
-    `Debug trace:`,
-    ...debugInfo.map(d => `  - ${d}`),
-    `Errors:`,
-    ...errors.map(e => `  - ${e}`),
-  ].join('; ');
-  
-  console.error(errorDetail);
-  throw new Error(errorDetail);
+
+  console.log(`[METAR] Final: ${records.length} records for ${stations.join(',')}`);
+
+  // Sort by time (newest first)
+  records.sort((a, b) => {
+    const timeA = a.parsed.observationTime ? new Date(a.parsed.observationTime).getTime() : 0;
+    const timeB = b.parsed.observationTime ? new Date(b.parsed.observationTime).getTime() : 0;
+    return timeB - timeA;
+  });
+
+  // Cache the result
+  responseCache.set(cacheKey, { data: records, expiry: Date.now() + CACHE_TTL_MS });
+
+  return records;
 }
 
 // Popular Indonesian airport ICAO codes
