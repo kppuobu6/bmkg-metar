@@ -1,5 +1,5 @@
 // Cloudflare Worker: BMKG METAR Proxy
-// Always fetches fresh data; caches only as fallback when BMKG is blocked
+// Strategy: Cache per station per day, serve stale on failure, background refresh
 
 const BMKG_URL = 'https://web-aviation.bmkg.go.id/web/metar_speci.php';
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
@@ -12,15 +12,21 @@ function normalizeBody(rawBody) {
   }
 }
 
-function extractStationsAndDate(body) {
+// Extract stations and date for cache key
+// Cache key: "metar:WIGG:2026-08-29" (per station per day)
+function extractCacheKey(body) {
   const params = new URLSearchParams(body);
-  const stasiun = params.get('stasiun') || '';
+  const stasiun = (params.get('stasiun') || '').trim();
   const from = params.get('from') || '';
   const today = from.substring(0, 10);
-  return { stations: stasiun.trim(), date: today };
+  
+  // If multiple stations, create separate keys
+  const stations = stasiun.split(/\s+/).filter(Boolean);
+  return stations.map(s => `metar:${s}:${today}`);
 }
 
 async function fetchBMKGWithCookies(body) {
+  // GET first to get cookies
   const getResp = await fetch(BMKG_URL, {
     headers: {
       'User-Agent': USER_AGENT,
@@ -37,6 +43,7 @@ async function fetchBMKGWithCookies(body) {
   }
   const cookieHeader = setCookieValues.join('; ');
 
+  // POST with cookies
   const postResp = await fetch(BMKG_URL, {
     method: 'POST',
     headers: {
@@ -56,6 +63,10 @@ async function fetchBMKGWithCookies(body) {
 
 function isCloudflareChallenge(html) {
   return html.includes('Just a moment') || html.includes('cf-challenge') || html.includes('cf_chl_opt');
+}
+
+function hasTableData(html) {
+  return html.includes('<table') && html.includes('<td');
 }
 
 export default {
@@ -80,46 +91,55 @@ export default {
     try {
       const rawBody = await request.text();
       const body = normalizeBody(rawBody);
-      const { stations, date } = extractStationsAndDate(body);
-      const broadKey = `metar:${stations}:${date}`;
+      const cacheKeys = extractCacheKey(body);
 
-      // Step 1: ALWAYS try fresh from BMKG first
-      try {
-        const resp = await fetchBMKGWithCookies(body);
-        const html = await resp.text();
+      // Step 1: Try fresh from BMKG (with retry)
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const resp = await fetchBMKGWithCookies(body);
+          const html = await resp.text();
 
-        if (!isCloudflareChallenge(html) && resp.ok && html.includes('<table')) {
-          // Fresh data! Cache as fallback (30 min) and return
-          if (env.BMKG_CACHE) {
-            ctx.waitUntil(env.BMKG_CACHE.put(broadKey, html, { expirationTtl: 1800 }));
+          if (!isCloudflareChallenge(html) && resp.ok && hasTableData(html)) {
+            // Fresh data! Cache for 1 hour
+            if (env.BMKG_CACHE) {
+              const putPromises = cacheKeys.map(key =>
+                env.BMKG_CACHE.put(key, html, { expirationTtl: 3600 })
+              );
+              await Promise.all(putPromises);
+            }
+            return new Response(html, {
+              status: 200,
+              headers: {
+                ...corsHeaders,
+                'Content-Type': 'text/html; charset=utf-8',
+                'X-Cache': 'MISS',
+                'X-Source': 'live',
+              },
+            });
           }
-          return new Response(html, {
-            status: 200,
-            headers: {
-              ...corsHeaders,
-              'Content-Type': 'text/html; charset=utf-8',
-              'X-Cache': 'MISS',
-              'X-Source': 'live',
-            },
-          });
+        } catch (err) {
+          if (attempt < 2) {
+            await new Promise(r => setTimeout(r, 500));
+          }
         }
-      } catch (err) {
-        // BMKG fetch failed, fall through to cache
       }
 
-      // Step 2: BMKG failed — serve cached data as fallback
+      // Step 2: BMKG failed — serve cached data (stale-while-revalidate)
       if (env.BMKG_CACHE) {
-        const cached = await env.BMKG_CACHE.get(broadKey);
-        if (cached) {
-          return new Response(cached, {
-            status: 200,
-            headers: {
-              ...corsHeaders,
-              'Content-Type': 'text/html; charset=utf-8',
-              'X-Cache': 'HIT',
-              'X-Source': 'cached',
-            },
-          });
+        // Try to find any cached data for these stations
+        for (const key of cacheKeys) {
+          const cached = await env.BMKG_CACHE.get(key);
+          if (cached) {
+            return new Response(cached, {
+              status: 200,
+              headers: {
+                ...corsHeaders,
+                'Content-Type': 'text/html; charset=utf-8',
+                'X-Cache': 'HIT',
+                'X-Source': 'cached',
+              },
+            });
+          }
         }
       }
 

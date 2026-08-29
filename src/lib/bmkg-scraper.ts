@@ -11,7 +11,6 @@ export interface MetarRecord {
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
 // Cloudflare Worker proxy URL (set in .env.local as BMKG_PROXY_URL)
-// Contoh: https://bmkg-proxy.your-name.workers.dev/metar
 const BMKG_PROXY_URL = process.env.BMKG_PROXY_URL || '';
 
 // Fetch METAR from aviationweather.gov API (official NOAA API - free, no Cloudflare)
@@ -138,48 +137,73 @@ async function fetchFromBMKG(
   if (includeMetar) formData.append('metar', 'SA');
   if (includeSpeci) formData.append('speci', 'SP');
 
-  // Try up to 2 times (proxy may intermittently fail)
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    console.log(`BMKG proxy attempt ${attempt}/2...`);
+  const body = formData.toString();
+  console.log('BMKG proxy request:', { station: stations, from, to, proxyUrl: BMKG_PROXY_URL });
+
+  // Try up to 3 times with exponential backoff
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    console.log(`BMKG proxy attempt ${attempt}/3...`);
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      const timeoutId = setTimeout(() => controller.abort(), 20000);
 
       const response = await fetch(BMKG_PROXY_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: formData.toString(),
+        body,
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        console.error(`BMKG proxy returned ${response.status} on attempt ${attempt}`);
-        if (attempt < 2) {
-          await new Promise(r => setTimeout(r, 1000));
+        const errText = await response.text().catch(() => '');
+        console.error(`BMKG proxy returned ${response.status} on attempt ${attempt}:`, errText.substring(0, 200));
+        if (attempt < 3) {
+          await new Promise(r => setTimeout(r, 1000 * attempt));
           continue;
         }
         throw new Error(`BMKG proxy error: ${response.status}`);
       }
 
       const html = await response.text();
-      if (html.includes('Just a moment') || html.includes('cf-challenge')) {
+      
+      // Check for Cloudflare challenge
+      if (html.includes('Just a moment') || html.includes('cf-challenge') || html.includes('cf_chl_opt')) {
         console.error(`BMKG proxy returned Cloudflare challenge on attempt ${attempt}`);
-        if (attempt < 2) {
-          await new Promise(r => setTimeout(r, 1000));
+        if (attempt < 3) {
+          await new Promise(r => setTimeout(r, 1000 * attempt));
           continue;
         }
         throw new Error('BMKG proxy blocked by Cloudflare challenge');
       }
 
+      // Check for table data
+      if (!html.includes('<table') || !html.includes('<td')) {
+        console.error(`BMKG proxy returned HTML without table data on attempt ${attempt}`);
+        if (attempt < 3) {
+          await new Promise(r => setTimeout(r, 1000 * attempt));
+          continue;
+        }
+        throw new Error('BMKG proxy returned empty data');
+      }
+
       const $ = cheerio.load(html);
       const records = parseBMKGHtml(html, $);
       console.log(`BMKG proxy returned ${records.length} records`);
+      
+      if (records.length === 0) {
+        console.error('BMKG proxy returned 0 records from table');
+        if (attempt < 3) {
+          await new Promise(r => setTimeout(r, 1000 * attempt));
+          continue;
+        }
+      }
+      
       return records;
     } catch (err) {
-      if (attempt < 2) {
-        console.error(`BMKG proxy attempt ${attempt} failed:`, err instanceof Error ? err.message : err);
-        await new Promise(r => setTimeout(r, 1000));
+      console.error(`BMKG proxy attempt ${attempt} failed:`, err instanceof Error ? err.message : err);
+      if (attempt < 3) {
+        await new Promise(r => setTimeout(r, 1000 * attempt));
         continue;
       }
       throw err;
