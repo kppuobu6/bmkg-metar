@@ -1,5 +1,5 @@
-// Cloudflare Worker: BMKG METAR Proxy with KV Cache
-// Serves cached METAR data; refreshes from BMKG when possible
+// Cloudflare Worker: BMKG METAR Proxy with smart KV Cache
+// Caches per-station per-day so any time range hits cache
 
 const BMKG_URL = 'https://web-aviation.bmkg.go.id/web/metar_speci.php';
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
@@ -12,8 +12,16 @@ function normalizeBody(rawBody) {
   }
 }
 
+// Extract station names and today's date for broad cache key
+function extractStationsAndDate(body) {
+  const params = new URLSearchParams(body);
+  const stasiun = params.get('stasiun') || '';
+  const from = params.get('from') || '';
+  const today = from.substring(0, 10); // YYYY-MM-DD
+  return { stations: stasiun.trim(), date: today };
+}
+
 async function fetchBMKGWithCookies(body) {
-  // Step 1: GET to collect session cookies
   const getResp = await fetch(BMKG_URL, {
     headers: {
       'User-Agent': USER_AGENT,
@@ -30,7 +38,6 @@ async function fetchBMKGWithCookies(body) {
   }
   const cookieHeader = setCookieValues.join('; ');
 
-  // Step 2: POST with cookies
   const postResp = await fetch(BMKG_URL, {
     method: 'POST',
     headers: {
@@ -74,12 +81,19 @@ export default {
     try {
       const rawBody = await request.text();
       const body = normalizeBody(rawBody);
-      const cacheKey = `metar:${body}`;
 
-      // Step 1: Check cache
+      // Generate cache keys
+      const exactKey = `metar:${body}`;
+      const { stations, date } = extractStationsAndDate(body);
+      const broadKey = `metar:${stations}:${date}`;
+
+      // Step 1: Check exact cache, then broad cache
       let cached = null;
       if (env.BMKG_CACHE) {
-        cached = await env.BMKG_CACHE.get(cacheKey);
+        cached = await env.BMKG_CACHE.get(exactKey);
+        if (!cached) {
+          cached = await env.BMKG_CACHE.get(broadKey);
+        }
       }
 
       // Step 2: Try to fetch fresh data from BMKG
@@ -94,9 +108,10 @@ export default {
           freshHtml = html;
           freshOk = true;
 
-          // Cache fresh data for 6 hours
+          // Cache for 24 hours under both keys
           if (env.BMKG_CACHE) {
-            ctx.waitUntil(env.BMKG_CACHE.put(cacheKey, html, { expirationTtl: 21600 }));
+            ctx.waitUntil(env.BMKG_CACHE.put(exactKey, html, { expirationTtl: 86400 }));
+            ctx.waitUntil(env.BMKG_CACHE.put(broadKey, html, { expirationTtl: 86400 }));
           }
         }
       } catch (err) {
