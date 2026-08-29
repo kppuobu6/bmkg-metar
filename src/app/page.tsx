@@ -164,11 +164,13 @@ function MetarCard({ record }: { record: MetarRecord }) {
 export default function Home() {
   const [stations, setStations] = useState("WIII");
   const [from, setFrom] = useState(() => {
-    const d = new Date();
-    d.setHours(d.getHours() - 12);
-    return d.toISOString().slice(0, 16);
+    const wib = new Date(Date.now() + 7 * 60 * 60 * 1000 - 12 * 60 * 60 * 1000);
+    return wib.toISOString().slice(0, 16);
   });
-  const [to, setTo] = useState(() => new Date().toISOString().slice(0, 16));
+  const [to, setTo] = useState(() => {
+    const wib = new Date(Date.now() + 7 * 60 * 60 * 1000);
+    return wib.toISOString().slice(0, 16);
+  });
   const [records, setRecords] = useState<MetarRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -187,9 +189,10 @@ export default function Home() {
     setLoading(true);
     setError(null);
     
-    // Auto-update "To" time to current time
-    const now = new Date();
-    setTo(now.toISOString().slice(0, 16));
+    // Auto-update "To" time to current time in WIB
+    const nowWib = new Date(Date.now() + 7 * 60 * 60 * 1000);
+    const toStr = nowWib.toISOString().slice(0, 16);
+    setTo(toStr);
     
     try {
       const stationList = stations.split(/[\s,]+/).filter(Boolean);
@@ -198,7 +201,7 @@ export default function Home() {
       const params = new URLSearchParams({
         stations: stationList.join(","),
         from,
-        to: now.toISOString().slice(0, 16),
+        to: toStr,
         t: cacheBuster.toString(),
       });
       
