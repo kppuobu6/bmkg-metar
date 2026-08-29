@@ -560,4 +560,5 @@ export const POPULAR_STATIONS = [
   { code: 'WARJ', name: 'Surabaya (Abdul Rachman Saleh)' },
   { code: 'WIGG', name: 'Bengkulu (Fatmawati Soekarno)' },
   { code: 'WIJJ', name: 'Jambi (Sultan Thaha)' },
+  { code: 'WIKT', name: 'Tanjung Pandan (H.A.S. Hanandjoeddin)' },
 ];

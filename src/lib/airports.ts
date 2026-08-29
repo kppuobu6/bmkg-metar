@@ -37,6 +37,7 @@ export const AIRPORT_NAMES: Record<string, string> = {
   WIDN: "Bandar Udara Tanjung Harapan - Tanjung Balai",
   WIKB: "Bandar Udara Depati Parbo - Sungai Penuh",
   WIGG: "Bandar Udara Fatmawati Soekarno - Bengkulu",
+  WIKT: "Bandar Udara Internasional H.A.S. Hanandjoeddin - Tanjung Pandan",
   WILP: "Bandar Udara Pekanbaru - Pekanbaru",
   WIOO: "Bandar Udara Rembele - Banda Aceh",
   WITB: "Bandar Udara Sultan Iskandar Muda - Banda Aceh",

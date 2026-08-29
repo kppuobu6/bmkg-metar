@@ -27,6 +27,7 @@ const POPULAR_STATIONS = [
   { code: "WARJ" },
   { code: "WIEE" },
   { code: "WIBB" },
+  { code: "WIKT" },
 ];
 
 function MetarCard({ record }: { record: MetarRecord }) {
