@@ -3,9 +3,9 @@ import { NextResponse } from 'next/server';
 export async function GET() {
   const proxyUrl = process.env.BMKG_PROXY_URL || 'NOT SET';
   
-  // Test proxy call
-  let proxyResult: string = '';
-  let proxyError: string = '';
+  let proxyStatus = 'N/A';
+  let proxyBodySnippet = '';
+  let directError = '';
   
   if (proxyUrl && proxyUrl !== 'NOT SET') {
     try {
@@ -22,18 +22,18 @@ export async function GET() {
         body: formData.toString(),
       });
       
-      proxyResult = `Status: ${response.status}`;
+      proxyStatus = `${response.status} ${response.statusText}`;
       const text = await response.text();
-      const metarCount = (text.match(/METAR WIGG/g) || []).length;
-      proxyResult += `, METAR count: ${metarCount}`;
+      proxyBodySnippet = text.substring(0, 500);
     } catch (err) {
-      proxyError = err instanceof Error ? err.message : 'unknown';
+      directError = err instanceof Error ? err.message : 'unknown';
     }
   }
 
   return NextResponse.json({
     BMKG_PROXY_URL: proxyUrl,
-    isSet: proxyUrl !== 'NOT SET' && proxyUrl !== '',
-    proxyTest: proxyResult || proxyError || 'skipped',
+    proxyStatus,
+    proxyBodySnippet,
+    error: directError,
   });
 }
