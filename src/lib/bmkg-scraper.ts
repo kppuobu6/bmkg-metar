@@ -93,17 +93,14 @@ async function fetchFromAviationWeather(
   return records;
 }
 
-// Fallback: Fetch from BMKG (may not work on Vercel due to Cloudflare)
-async function fetchFromBMKG(
+// Fetch METAR data from BMKG HTML page
+async function fetchBMKGRaw(
   stations: string[],
   from: string,
   to: string,
   includeMetar: boolean = true,
   includeSpeci: boolean = true
-): Promise<MetarRecord[]> {
-  // Dynamic import cheerio to avoid build issues
-  const cheerio = await import('cheerio');
-  
+): Promise<string> {
   const formData = new URLSearchParams();
   formData.append('stasiun', stations.join(' '));
   formData.append('from', from);
@@ -111,24 +108,19 @@ async function fetchFromBMKG(
   if (includeMetar) formData.append('metar', 'SA');
   if (includeSpeci) formData.append('speci', 'SP');
 
-  // Gunakan Cloudflare Worker proxy jika tersedia, fallback ke direct
-  const bmkgUrl = BMKG_PROXY_URL || 'https://web-aviation.bmkg.go.id/web/metar_speci.php';
+  const BMKG_URL = 'https://web-aviation.bmkg.go.id/web/metar_speci.php';
   
   const headers: Record<string, string> = {
     'Content-Type': 'application/x-www-form-urlencoded',
+    'User-Agent': USER_AGENT,
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+    'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Referer': BMKG_URL,
+    'Origin': 'https://web-aviation.bmkg.go.id',
   };
 
-  // Jika direct ke BMKG (bukan proxy), tambahkan headers lengkap
-  if (!BMKG_PROXY_URL) {
-    headers['User-Agent'] = USER_AGENT;
-    headers['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8';
-    headers['Accept-Language'] = 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7';
-    headers['Accept-Encoding'] = 'gzip, deflate, br';
-    headers['Referer'] = 'https://web-aviation.bmkg.go.id/web/metar_speci.php';
-    headers['Origin'] = 'https://web-aviation.bmkg.go.id';
-  }
-
-  const response = await fetch(bmkgUrl, {
+  const response = await fetch(BMKG_URL, {
     method: 'POST',
     headers,
     body: formData.toString(),
@@ -138,8 +130,11 @@ async function fetchFromBMKG(
     throw new Error(`BMKG error: ${response.status}`);
   }
 
-  const html = await response.text();
-  const $ = cheerio.load(html);
+  return response.text();
+}
+
+// Parse METAR records from BMKG HTML
+function parseBMKGHtml(html: string, $: any): MetarRecord[] {
   const records: MetarRecord[] = [];
 
   $('table tbody tr').each((_: number, row: any) => {
@@ -158,6 +153,67 @@ async function fetchFromBMKG(
   });
 
   return records;
+}
+
+// Fallback: Fetch from BMKG
+// Tries direct first, then proxy if direct fails with Cloudflare challenge
+async function fetchFromBMKG(
+  stations: string[],
+  from: string,
+  to: string,
+  includeMetar: boolean = true,
+  includeSpeci: boolean = true
+): Promise<MetarRecord[]> {
+  const cheerio = await import('cheerio');
+  
+  // Try direct BMKG first
+  try {
+    console.log('Trying direct BMKG...');
+    const html = await fetchBMKGRaw(stations, from, to, includeMetar, includeSpeci);
+    
+    // Check if response is Cloudflare challenge page
+    if (html.includes('Just a moment') || html.includes('cf-challenge')) {
+      console.log('BMKG returned Cloudflare challenge, trying proxy...');
+    } else {
+      const $ = cheerio.load(html);
+      const records = parseBMKGHtml(html, $);
+      if (records.length > 0) return records;
+      console.log('BMKG returned no records from direct, trying proxy...');
+    }
+  } catch (err) {
+    console.error('Direct BMKG failed:', err instanceof Error ? err.message : err);
+  }
+
+  // Fallback to proxy
+  if (BMKG_PROXY_URL) {
+    console.log('Trying BMKG via proxy...');
+    const formData = new URLSearchParams();
+    formData.append('stasiun', stations.join(' '));
+    formData.append('from', from);
+    formData.append('to', to);
+    if (includeMetar) formData.append('metar', 'SA');
+    if (includeSpeci) formData.append('speci', 'SP');
+
+    const response = await fetch(BMKG_PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData.toString(),
+    });
+
+    if (!response.ok) {
+      throw new Error(`BMKG proxy error: ${response.status}`);
+    }
+
+    const html = await response.text();
+    if (html.includes('Just a moment') || html.includes('cf-challenge')) {
+      throw new Error('BMKG proxy also blocked by Cloudflare challenge');
+    }
+
+    const $ = cheerio.load(html);
+    return parseBMKGHtml(html, $);
+  }
+
+  throw new Error('All BMKG sources failed');
 }
 
 // Main function: Try aviationweather.gov first, fallback to BMKG
