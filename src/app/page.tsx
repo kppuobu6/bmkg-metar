@@ -267,12 +267,10 @@ export default function Home() {
       <header className="border-b border-gray-100 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-lg text-white shadow-sm">
-              ✈
-            </div>
+            <img src="/favicon.png" alt="Logo" className="h-10 w-10 rounded-xl shadow-sm" />
             <div>
               <h1 className="text-lg font-bold tracking-tight text-gray-900">
-                BMKG METAR Viewer
+                BMKG Metar | Kelaikudaraan V2
               </h1>
               <p className="text-xs text-gray-500">
                 Real-time Indonesian aviation weather
