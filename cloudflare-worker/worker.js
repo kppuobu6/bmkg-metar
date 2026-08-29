@@ -1,12 +1,10 @@
 // Cloudflare Worker: BMKG METAR Proxy with KV Cache
-// Caches METAR data to avoid hitting BMKG's Cloudflare protection repeatedly
+// Serves cached METAR data; refreshes from BMKG when possible
 
 const BMKG_URL = 'https://web-aviation.bmkg.go.id/web/metar_speci.php';
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
 function normalizeBody(rawBody) {
-  // Normalize: decode URL-encoded characters to ensure consistent cache keys
-  // URLSearchParams.toString() encodes colons as %3A, but literal colons should match
   try {
     return decodeURIComponent(rawBody).replace(/\+/g, ' ');
   } catch {
@@ -24,7 +22,6 @@ async function fetchBMKGWithCookies(body) {
     },
   });
 
-  // Parse Set-Cookie manually
   const setCookieValues = [];
   for (const [key, value] of getResp.headers.entries()) {
     if (key.toLowerCase() === 'set-cookie') {
@@ -51,6 +48,10 @@ async function fetchBMKGWithCookies(body) {
   return postResp;
 }
 
+function isCloudflareChallenge(html) {
+  return html.includes('Just a moment') || html.includes('cf-challenge') || html.includes('cf_chl_opt');
+}
+
 export default {
   async fetch(request, env, ctx) {
     const corsHeaders = {
@@ -73,39 +74,68 @@ export default {
     try {
       const rawBody = await request.text();
       const body = normalizeBody(rawBody);
-
-      // Check cache first (KV) using normalized body
       const cacheKey = `metar:${body}`;
+
+      // Step 1: Check cache
+      let cached = null;
       if (env.BMKG_CACHE) {
-        const cached = await env.BMKG_CACHE.get(cacheKey);
-        if (cached) {
-          return new Response(cached, {
-            status: 200,
-            headers: { ...corsHeaders, 'Content-Type': 'text/html; charset=utf-8', 'X-Cache': 'HIT' },
-          });
+        cached = await env.BMKG_CACHE.get(cacheKey);
+      }
+
+      // Step 2: Try to fetch fresh data from BMKG
+      let freshHtml = null;
+      let freshOk = false;
+
+      try {
+        const resp = await fetchBMKGWithCookies(body);
+        const html = await resp.text();
+
+        if (!isCloudflareChallenge(html) && resp.ok && html.includes('<table')) {
+          freshHtml = html;
+          freshOk = true;
+
+          // Cache fresh data for 6 hours
+          if (env.BMKG_CACHE) {
+            ctx.waitUntil(env.BMKG_CACHE.put(cacheKey, html, { expirationTtl: 21600 }));
+          }
         }
+      } catch (err) {
+        // BMKG fetch failed, will use cached data if available
       }
 
-      // Fetch from BMKG with cookies
-      const resp = await fetchBMKGWithCookies(body);
-      const html = await resp.text();
-
-      // Check for Cloudflare challenge
-      const isChallenge = html.includes('Just a moment') || html.includes('cf-challenge');
-
-      if (!isChallenge && resp.ok && env.BMKG_CACHE) {
-        // Cache for 1 hour
-        ctx.waitUntil(env.BMKG_CACHE.put(cacheKey, html, { expirationTtl: 3600 }));
+      // Step 3: Return best available data
+      if (freshOk && freshHtml) {
+        return new Response(freshHtml, {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'text/html; charset=utf-8',
+            'X-Cache': cached ? 'STALE' : 'MISS',
+            'X-Source': 'live',
+          },
+        });
       }
 
-      return new Response(html, {
-        status: isChallenge ? 503 : resp.status,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'text/html; charset=utf-8',
-          'X-Cache': 'MISS',
-        },
-      });
+      if (cached) {
+        return new Response(cached, {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'text/html; charset=utf-8',
+            'X-Cache': 'HIT',
+            'X-Source': 'cached',
+          },
+        });
+      }
+
+      // No cache and BMKG failed
+      return new Response(
+        JSON.stringify({ error: 'BMKG temporarily unavailable and no cached data' }),
+        {
+          status: 503,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     } catch (error) {
       return new Response(
         JSON.stringify({ error: `Proxy error: ${error.message}` }),
