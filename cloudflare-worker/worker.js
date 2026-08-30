@@ -189,12 +189,17 @@ export default {
           }
 
           // Fresh valid data! Cache briefly — long TTLs make obs stale since
-          // BMKG serves stale-while-revalidate anyway (cache is only a fallback)
+          // BMKG serves stale-while-revalidate anyway (cache is only a fallback).
+          // Also keep a per-station snapshot with a 1h TTL as a rescue copy.
           if (env.BMKG_CACHE) {
-            const putPromises = cacheKeys.map(key =>
-              env.BMKG_CACHE.put(key, html, { expirationTtl: 180 })
-            );
-            await Promise.all(putPromises);
+            const station = cacheKeys[0].split(':')[1] || 'unknown';
+            const puts = [
+              ...cacheKeys.map(key =>
+                env.BMKG_CACHE.put(key, html, { expirationTtl: 180 })
+              ),
+              env.BMKG_CACHE.put(`snapshot:${station}`, html, { expirationTtl: 3600 }),
+            ];
+            await Promise.all(puts);
           }
           return new Response(html, {
             status: 200,
@@ -240,7 +245,26 @@ export default {
         }
       }
 
-      // No cache and BMKG failed
+      // BMKG failed and exact key cache empty/invalid — serve the per-station
+      // snapshot (1h TTL rescue copy) instead of erroring with an empty 503
+      if (env.BMKG_CACHE) {
+        const station = (cacheKeys[0] || '').split(':')[1] || '';
+        const snapshot = station ? await env.BMKG_CACHE.get(`snapshot:${station}`) : null;
+        if (snapshot && hasTableData(snapshot) && !isCloudflareChallenge(snapshot) && !isErrorPage(snapshot)) {
+          console.error(`Serving snapshot:${station} after BMKG failure`);
+          return new Response(snapshot, {
+            status: 200,
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'text/html; charset=utf-8',
+              'X-Cache': 'STALE',
+              'X-Source': 'snapshot',
+            },
+          });
+        }
+      }
+
+      // Truly nothing to serve
       return new Response(
         JSON.stringify({ error: 'BMKG temporarily unavailable' }),
         {

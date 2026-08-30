@@ -451,7 +451,12 @@ async function fetchFromBMKGSingle(
 
       const response = await fetch(BMKG_PROXY_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          // CF in front of workers.dev 403s UA-less requests from datacenter IPs
+          'User-Agent': USER_AGENT,
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        },
         body,
         signal: controller.signal,
       });
