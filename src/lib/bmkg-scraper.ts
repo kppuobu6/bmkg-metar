@@ -463,19 +463,23 @@ function mergeRecords(...sources: MetarRecord[][]): MetarRecord[] {
 }
 
 // Main function: Fetch from all sources in parallel, return the freshest data
+// opts.fresh skips the in-memory cache so every request hits live sources
 export async function fetchMetarData(
   stations: string[],
   from: string, // YYYY-MM-DDTHH:MM
   to: string,   // YYYY-MM-DDTHH:MM
   includeMetar: boolean = true,
-  includeSpeci: boolean = true
+  includeSpeci: boolean = true,
+  opts: { fresh?: boolean } = {}
 ): Promise<MetarRecord[]> {
   // Check in-memory cache first (same serverless instance, recent request)
   const cacheKey = getCacheKey(stations, from, to);
-  const cached = responseCache.get(cacheKey);
-  if (cached && cached.expiry > Date.now()) {
-    console.log(`[Cache] Serving ${cached.data.length} records from in-memory cache`);
-    return cached.data;
+  if (!opts.fresh) {
+    const cached = responseCache.get(cacheKey);
+    if (cached && cached.expiry > Date.now()) {
+      console.log(`[Cache] Serving ${cached.data.length} records from in-memory cache`);
+      return cached.data;
+    }
   }
 
   const fromDate = new Date(from);

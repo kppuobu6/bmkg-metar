@@ -15,7 +15,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const records = await fetchMetarData(stations, from, to);
+    // `t` is the frontend cache-buster: when present, always hit live sources
+    const fresh = searchParams.has('t');
+    const records = await fetchMetarData(stations, from, to, true, true, { fresh });
     const response = NextResponse.json({
       records,
       count: records.length,
