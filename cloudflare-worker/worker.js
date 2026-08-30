@@ -135,33 +135,35 @@ export default {
       const body = normalizeBody(rawBody);
       const cacheKeys = extractCacheKey(body);
 
-      // Step 1: Try fresh from BMKG (with retry)
-      for (let attempt = 1; attempt <= 2; attempt++) {
+      // Step 1: Try fresh from BMKG (with retry — each attempt re-does GET for
+      // fresh cookies + CSRF token, which is what usually clears a transient
+      // Cloudflare challenge; longer backoff gives the challenge time to pass)
+      for (let attempt = 1; attempt <= 3; attempt++) {
         try {
           const resp = await fetchBMKGWithCookies(body);
           const html = await resp.text();
 
           if (!resp.ok) {
             console.error(`BMKG returned ${resp.status} on attempt ${attempt}`);
-            if (attempt < 2) await new Promise(r => setTimeout(r, 500));
+            if (attempt < 3) await new Promise(r => setTimeout(r, 1500 * attempt));
             continue;
           }
 
           if (isCloudflareChallenge(html)) {
             console.error(`BMKG returned Cloudflare challenge on attempt ${attempt}`);
-            if (attempt < 2) await new Promise(r => setTimeout(r, 500));
+            if (attempt < 3) await new Promise(r => setTimeout(r, 1500 * attempt));
             continue;
           }
 
           if (isErrorPage(html)) {
             console.error(`BMKG returned error page on attempt ${attempt}`);
-            if (attempt < 2) await new Promise(r => setTimeout(r, 500));
+            if (attempt < 3) await new Promise(r => setTimeout(r, 1500 * attempt));
             continue;
           }
 
           if (!hasTableData(html)) {
             console.error(`BMKG returned HTML without table on attempt ${attempt}`);
-            if (attempt < 2) await new Promise(r => setTimeout(r, 500));
+            if (attempt < 3) await new Promise(r => setTimeout(r, 1500 * attempt));
             continue;
           }
 
@@ -205,7 +207,7 @@ export default {
           });
         } catch (err) {
           console.error(`BMKG fetch attempt ${attempt} failed:`, err.message);
-          if (attempt < 2) await new Promise(r => setTimeout(r, 500));
+          if (attempt < 3) await new Promise(r => setTimeout(r, 1500 * attempt));
         }
       }
 
