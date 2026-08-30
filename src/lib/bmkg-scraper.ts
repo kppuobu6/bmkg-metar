@@ -350,7 +350,7 @@ async function fetchFromBMKGSingle(
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
 
       const response = await fetch(BMKG_PROXY_URL, {
         method: 'POST',
