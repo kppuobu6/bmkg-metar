@@ -25,8 +25,22 @@ function extractCacheKey(body) {
   return stations.map(s => `metar:${s}:${today}`);
 }
 
+// BMKG is a Laravel app: POST requires the CSRF _token from the GET page,
+// in addition to the session cookies (XSRF-TOKEN + aviation_session).
+function extractCsrfToken(html) {
+  const match = html.match(/name="_token"\s+value="([^"]+)"/);
+  return match ? match[1] : null;
+}
+
+// Inject/replace the _token field into the form body
+function withCsrfToken(body, token) {
+  const params = new URLSearchParams(body);
+  params.set('_token', token);
+  return params.toString();
+}
+
 async function fetchBMKGWithCookies(body) {
-  // GET first to get cookies
+  // GET first to get cookies + CSRF token
   const getResp = await fetch(BMKG_URL, {
     headers: {
       'User-Agent': USER_AGENT,
@@ -43,7 +57,14 @@ async function fetchBMKGWithCookies(body) {
   }
   const cookieHeader = setCookieValues.join('; ');
 
-  // POST with cookies
+  const getHtml = await getResp.text();
+  const csrfToken = extractCsrfToken(getHtml);
+  if (!csrfToken) {
+    console.error('BMKG: could not extract CSRF _token from GET page');
+    // Continue anyway — maybe the site changed and no longer needs it
+  }
+
+  // POST with cookies + CSRF token
   const postResp = await fetch(BMKG_URL, {
     method: 'POST',
     headers: {
@@ -55,7 +76,7 @@ async function fetchBMKGWithCookies(body) {
       'Origin': 'https://web-aviation.bmkg.go.id',
       ...(cookieHeader ? { 'Cookie': cookieHeader } : {}),
     },
-    body,
+    body: csrfToken ? withCsrfToken(body, csrfToken) : body,
   });
 
   return postResp;
@@ -70,9 +91,10 @@ function hasTableData(html) {
 }
 
 // Validate that HTML contains actual METAR/SPECI data, not just an empty table
+// ICAO codes here start with W or A followed by 3 letters (e.g. WIKK, WIII, WAAA)
 function hasValidMetarContent(html) {
   // Must have at least one METAR or SPECI record
-  return /METAR\s+[WA]{2}[A-Z]{2}/.test(html) || /SPECI\s+[WA]{2}[A-Z]{2}/.test(html);
+  return /METAR\s+[WA][A-Z]{3}/.test(html) || /SPECI\s+[WA][A-Z]{3}/.test(html);
 }
 
 // Check if HTML looks like an error page or redirect
