@@ -186,10 +186,11 @@ export default {
             });
           }
 
-          // Fresh valid data! Cache for 1 hour
+          // Fresh valid data! Cache briefly — long TTLs make obs stale since
+          // BMKG serves stale-while-revalidate anyway (cache is only a fallback)
           if (env.BMKG_CACHE) {
             const putPromises = cacheKeys.map(key =>
-              env.BMKG_CACHE.put(key, html, { expirationTtl: 3600 })
+              env.BMKG_CACHE.put(key, html, { expirationTtl: 180 })
             );
             await Promise.all(putPromises);
           }
