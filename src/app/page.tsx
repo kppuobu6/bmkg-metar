@@ -15,18 +15,11 @@ interface MetarRecord {
 import { AIRPORT_NAMES } from "@/lib/airports";
 
 const POPULAR_STATIONS = [
-  { code: "WIII" },
-  { code: "WADD" },
-  { code: "WICC" },
-  { code: "WARR" },
-  { code: "WAHH" },
-  { code: "WAMM" },
-  { code: "WIMM" },
-  { code: "WATT" },
-  { code: "WAWS" },
-  { code: "WARJ" },
   { code: "WIEE" },
-  { code: "WIBB" },
+  { code: "WIJJ" },
+  { code: "WIGG" },
+  { code: "WIPP" },
+  { code: "WIKK" },
   { code: "WIKT" },
 ];
 
