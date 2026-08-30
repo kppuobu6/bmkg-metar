@@ -514,13 +514,16 @@ async function fetchFromBMKG(
 
   const results = await Promise.all(
     stations.map(async s => {
-      const direct = await fetchBMKGDirectSingle(s, from, to, includeMetar, includeSpeci);
-      if (direct) return direct;
+      // Worker first: proven to work from Vercel (CF blocks datacenter IPs on
+      // direct). Direct is the fallback — it works from local dev and rescues
+      // requests when the worker itself is down.
       if (BMKG_PROXY_URL) {
-        console.log(`BMKG ${s}: direct blocked/failing, falling back to worker proxy`);
-        return fetchFromBMKGSingle(s, from, to, includeMetar, includeSpeci);
+        const viaWorker = await fetchFromBMKGSingle(s, from, to, includeMetar, includeSpeci);
+        if (viaWorker.length > 0) return viaWorker;
+        console.log(`BMKG ${s}: worker empty/blocked, falling back to direct`);
       }
-      return [];
+      const direct = await fetchBMKGDirectSingle(s, from, to, includeMetar, includeSpeci);
+      return direct || [];
     })
   );
 
