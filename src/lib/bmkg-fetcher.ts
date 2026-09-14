@@ -33,15 +33,10 @@ export async function fetchBMKGPage(options: BmkgFetchOptions): Promise<string |
   const { gotScraping } = await import('got-scraping');
 
   const client = gotScraping.extend({
+    useHeaderGenerator: false,
     http2: true,
     timeout: { request: 30_000 },
     retry: { limit: 2, statusCodes: [403, 429, 500, 502, 503] },
-    headerGeneratorOptions: {
-      browsers: [{ name: 'chrome', minVersion: 120 }],
-      devices: ['desktop'],
-      operatingSystems: ['windows'],
-      locales: ['en-US', 'en'],
-    },
   });
 
   for (let attempt = 1; attempt <= 3; attempt++) {
@@ -49,8 +44,18 @@ export async function fetchBMKGPage(options: BmkgFetchOptions): Promise<string |
       // Step 1: GET the page to obtain cookies + CSRF token
       const getResp = await client.get(BMKG_URL, {
         headers: {
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
           'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'sec-ch-ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+          'sec-ch-ua-mobile': '?0',
+          'sec-ch-ua-platform': '"Windows"',
+          'sec-fetch-dest': 'document',
+          'sec-fetch-mode': 'navigate',
+          'sec-fetch-site': 'none',
+          'sec-fetch-user': '?1',
+          'upgrade-insecure-requests': '1',
         },
       });
 
@@ -90,10 +95,18 @@ export async function fetchBMKGPage(options: BmkgFetchOptions): Promise<string |
         form: Object.fromEntries(formData),
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
           'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
+          'Accept-Encoding': 'gzip, deflate, br',
           'Referer': BMKG_URL,
           'Origin': 'https://web-aviation.bmkg.go.id',
+          'sec-ch-ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+          'sec-ch-ua-mobile': '?0',
+          'sec-ch-ua-platform': '"Windows"',
+          'sec-fetch-dest': 'document',
+          'sec-fetch-mode': 'navigate',
+          'sec-fetch-site': 'same-origin',
           ...(cookies ? { 'Cookie': cookies } : {}),
         },
       });
