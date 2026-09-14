@@ -1,4 +1,5 @@
 import { parseMetar, type MetarData } from './metar-parser';
+import { fetchBMKGPage } from './bmkg-fetcher';
 
 export interface MetarRecord {
   station: string;
@@ -9,12 +10,6 @@ export interface MetarRecord {
 }
 
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
-
-// Cloudflare Worker proxy URL (set in .env.local as BMKG_PROXY_URL)
-const BMKG_PROXY_URL = process.env.BMKG_PROXY_URL || '';
-
-// BMKG form endpoint (direct access, no proxy)
-const BMKG_DIRECT_URL = 'https://web-aviation.bmkg.go.id/web/metar_speci.php';
 
 // Simple in-memory cache to reduce redundant API calls within the same serverless instance
 // This helps when multiple users search the same station around the same time
@@ -331,183 +326,7 @@ function parseBMKGHtml(html: string, $: any): MetarRecord[] {
 }
 
 
-// Parse the CSRF _token from the BMKG page (Laravel form)
-function extractCsrf(html: string): string | null {
-  const m = html.match(/name="_token"\s+value="([^"]+)"/);
-  return m ? m[1] : null;
-}
-
-// Collect cookies from a fetch Response (XSRF-TOKEN + aviation_session)
-function collectCookies(response: Response): string {
-  const cookies: string[] = [];
-  response.headers.forEach((value, key) => {
-    if (key.toLowerCase() === 'set-cookie') cookies.push(value.split(';')[0]);
-  });
-  return cookies.join('; ');
-}
-
-// Fetch METAR for one station DIRECTLY from BMKG (no proxy).
-// Same CSRF dance the worker does: GET page -> cookies + _token -> POST.
-// Returns null when blocked (CF challenge) so the caller can fall back.
-async function fetchBMKGDirectSingle(
-  station: string,
-  from: string,
-  to: string,
-  includeMetar: boolean,
-  includeSpeci: boolean
-): Promise<MetarRecord[] | null> {
-  const cheerio = await import('cheerio');
-
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      const getResp = await fetch(BMKG_DIRECT_URL, {
-        headers: {
-          'User-Agent': USER_AGENT,
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
-        },
-        signal: AbortSignal.timeout(30000),
-      });
-      const cookieHeader = collectCookies(getResp);
-      const csrf = extractCsrf(await getResp.text());
-
-      if (!cookieHeader || !csrf) {
-        console.error(`BMKG direct ${station}: missing cookie/CSRF (challenge?) (attempt ${attempt})`);
-        if (attempt < 2) { await new Promise(r => setTimeout(r, 1500)); continue; }
-        return null;
-      }
-
-      const formData = new URLSearchParams();
-      formData.append('_token', csrf);
-      formData.append('stasiun', station);
-      formData.append('from', from);
-      formData.append('to', to);
-      if (includeMetar) formData.append('metar', 'SA');
-      if (includeSpeci) formData.append('speci', 'SP');
-
-      const postResp = await fetch(BMKG_DIRECT_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': USER_AGENT,
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
-          'Referer': BMKG_DIRECT_URL,
-          'Origin': 'https://web-aviation.bmkg.go.id',
-          'Cookie': cookieHeader,
-        },
-        body: formData.toString(),
-        signal: AbortSignal.timeout(30000),
-      });
-
-      const html = await postResp.text();
-
-      if (html.includes('Just a moment') || html.includes('cf-challenge') || html.includes('cf_chl_opt')) {
-        console.error(`BMKG direct ${station}: CF challenge (attempt ${attempt})`);
-        if (attempt < 2) { await new Promise(r => setTimeout(r, 1500)); continue; }
-        return null;
-      }
-      if (!postResp.ok || !html.includes('<table')) {
-        console.error(`BMKG direct ${station}: HTTP ${postResp.status} / no table (attempt ${attempt})`);
-        if (attempt < 2) { await new Promise(r => setTimeout(r, 1500)); continue; }
-        return null;
-      }
-
-      const records = parseBMKGHtml(html, cheerio.load(html));
-      console.log(`BMKG direct ${station}: ${records.length} records`);
-      return records;
-    } catch (err) {
-      console.error(`BMKG direct ${station}: ${err instanceof Error ? err.message : err} (attempt ${attempt})`);
-      if (attempt < 2) { await new Promise(r => setTimeout(r, 1500)); continue; }
-      return null;
-    }
-  }
-  return null;
-}
-
-// Fetch METAR for a single station from BMKG via Cloudflare Worker proxy
-async function fetchFromBMKGSingle(
-  station: string,
-  from: string,
-  to: string,
-  includeMetar: boolean,
-  includeSpeci: boolean
-): Promise<MetarRecord[]> {
-  const cheerio = await import('cheerio');
-
-  const formData = new URLSearchParams();
-  formData.append('stasiun', station);
-  formData.append('from', from);
-  formData.append('to', to);
-  if (includeMetar) formData.append('metar', 'SA');
-  if (includeSpeci) formData.append('speci', 'SP');
-
-  const body = formData.toString();
-
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-      const response = await fetch(BMKG_PROXY_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          // CF in front of workers.dev 403s UA-less requests from datacenter IPs
-          'User-Agent': USER_AGENT,
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        },
-        body,
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errText = await response.text().catch(() => '');
-        console.error(`BMKG proxy ${station}: ${response.status} (attempt ${attempt})`);
-        if (attempt < 3) { await new Promise(r => setTimeout(r, 1000 * attempt)); continue; }
-        return [];
-      }
-
-      const contentType = response.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        const jsonBody = await response.json().catch(() => null);
-        console.error(`BMKG proxy ${station}: JSON error - ${jsonBody?.error} (attempt ${attempt})`);
-        if (attempt < 3) { await new Promise(r => setTimeout(r, 1000 * attempt)); continue; }
-        return [];
-      }
-
-      const html = await response.text();
-
-      if (html.includes('Just a moment') || html.includes('cf-challenge') || html.includes('cf_chl_opt')) {
-        console.error(`BMKG proxy ${station}: CF challenge (attempt ${attempt})`);
-        if (attempt < 3) { await new Promise(r => setTimeout(r, 1000 * attempt)); continue; }
-        return [];
-      }
-
-      if (!html.includes('<table') || !html.includes('<td')) {
-        console.error(`BMKG proxy ${station}: no table data (attempt ${attempt})`);
-        if (attempt < 3) { await new Promise(r => setTimeout(r, 1000 * attempt)); continue; }
-        return [];
-      }
-
-      const $ = cheerio.load(html);
-      const records = parseBMKGHtml(html, $);
-      console.log(`BMKG proxy ${station}: ${records.length} records`);
-      return records;
-    } catch (err) {
-      console.error(`BMKG proxy ${station}: ${err instanceof Error ? err.message : err} (attempt ${attempt})`);
-      if (attempt < 3) { await new Promise(r => setTimeout(r, 1000 * attempt)); continue; }
-      return [];
-    }
-  }
-
-  return [];
-}
-
-// Fetch METAR from BMKG: try DIRECT first (no proxy), fall back to the
-// Cloudflare Worker proxy when direct is blocked (e.g. CF challenge).
-// Each station individually (parallel) to avoid BMKG timeout on multi-station requests.
+// Fetch METAR from BMKG using got-scraping (bypasses Cloudflare via TLS fingerprinting)
 async function fetchFromBMKG(
   stations: string[],
   from: string,
@@ -517,18 +336,16 @@ async function fetchFromBMKG(
 ): Promise<MetarRecord[]> {
   console.log(`BMKG request: stations=${stations.join(',')} from=${from} to=${to}`);
 
+  const cheerio = await import('cheerio');
+
   const results = await Promise.all(
     stations.map(async s => {
-      // Worker first: proven to work from Vercel (CF blocks datacenter IPs on
-      // direct). Direct is the fallback — it works from local dev and rescues
-      // requests when the worker itself is down.
-      if (BMKG_PROXY_URL) {
-        const viaWorker = await fetchFromBMKGSingle(s, from, to, includeMetar, includeSpeci);
-        if (viaWorker.length > 0) return viaWorker;
-        console.log(`BMKG ${s}: worker empty/blocked, falling back to direct`);
-      }
-      const direct = await fetchBMKGDirectSingle(s, from, to, includeMetar, includeSpeci);
-      return direct || [];
+      const html = await fetchBMKGPage({ station: s, from, to, includeMetar, includeSpeci });
+      if (!html) return [];
+
+      const records = parseBMKGHtml(html, cheerio.load(html));
+      console.log(`BMKG ${s}: ${records.length} records`);
+      return records;
     })
   );
 
@@ -599,7 +416,7 @@ export async function fetchMetarData(
   const [aviationResult, skylinkResult, bmkgResult] = await Promise.allSettled([
     fetchFromAviationWeather(stations, hoursDiff),
     SKYLINK_API_KEY ? fetchFromSkyLink(stations) : Promise.resolve([]),
-    BMKG_PROXY_URL ? fetchFromBMKG(stations, from, to, includeMetar, includeSpeci) : Promise.resolve([]),
+    fetchFromBMKG(stations, from, to, includeMetar, includeSpeci),
   ]);
 
   const aviationRecords = aviationResult.status === 'fulfilled' ? aviationResult.value : [];
