@@ -48,12 +48,18 @@ function httpsRequest(
 ): Promise<{ statusCode: number; headers: http.IncomingHttpHeaders; body: string }> {
   return new Promise((resolve, reject) => {
     const parsedUrl = new URL(url);
+    // Don't send br (brotli) unless we can decompress it
+    const headers = { ...options.headers };
+    if (headers['Accept-Encoding']) {
+      headers['Accept-Encoding'] = 'gzip, deflate';
+    }
+
     const reqOptions: https.RequestOptions = {
       hostname: parsedUrl.hostname,
       port: 443,
       path: parsedUrl.pathname + parsedUrl.search,
       method: options.method || 'GET',
-      headers: options.headers || {},
+      headers,
     };
 
     const req = https.request(reqOptions, (res) => {
@@ -63,17 +69,12 @@ function httpsRequest(
         const encoding = res.headers['content-encoding'];
         let data = Buffer.concat(chunks);
 
-        // Decompress if needed (we'll skip brotli since it needs a library)
         if (encoding === 'gzip') {
           const zlib = require('node:zlib');
-          try {
-            data = zlib.gunzipSync(data);
-          } catch { /* ignore */ }
+          try { data = zlib.gunzipSync(data); } catch { /* ignore */ }
         } else if (encoding === 'deflate') {
           const zlib = require('node:zlib');
-          try {
-            data = zlib.inflateSync(data);
-          } catch { /* ignore */ }
+          try { data = zlib.inflateSync(data); } catch { /* ignore */ }
         }
 
         resolve({
@@ -97,6 +98,36 @@ function httpsRequest(
   });
 }
 
+// Follow redirects and return final response
+async function httpGetFollowRedirects(
+  url: string,
+  headers: Record<string, string>,
+  maxRedirects = 5
+): Promise<{ statusCode: number; headers: http.IncomingHttpHeaders; body: string }> {
+  let currentUrl = url;
+  let currentHeaders = { ...headers };
+
+  for (let i = 0; i <= maxRedirects; i++) {
+    const resp = await httpsRequest(currentUrl, { headers: currentHeaders });
+    const location = resp.headers.location;
+
+    if (resp.statusCode >= 300 && resp.statusCode < 400 && location) {
+      // Follow redirect
+      currentUrl = location.startsWith('http') ? location : new URL(location, currentUrl).href;
+      // Don't send cookies on cross-origin redirects
+      if (new URL(currentUrl).hostname !== new URL(url).hostname) {
+        const { Cookie, ...rest } = currentHeaders;
+        currentHeaders = rest;
+      }
+      continue;
+    }
+
+    return resp;
+  }
+
+  throw new Error('Too many redirects');
+}
+
 export interface BmkgFetchOptions {
   station: string;
   from: string;
@@ -110,10 +141,13 @@ export async function fetchBMKGPage(options: BmkgFetchOptions): Promise<string |
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      // Step 1: GET the page to obtain cookies + CSRF token
-      const getResp = await httpsRequest(BMKG_URL, {
-        headers: { ...BROWSER_HEADERS, 'sec-fetch-site': 'none' },
+      // Step 1: GET the page to obtain cookies + CSRF token (follow redirects)
+      const getResp = await httpGetFollowRedirects(BMKG_URL, {
+        ...BROWSER_HEADERS,
+        'sec-fetch-site': 'none',
       });
+
+      console.log(`BMKG ${station} GET: status=${getResp.statusCode} len=${getResp.body.length} hasCF=${isCloudflareChallenge(getResp.body)} hasCsrf=${!!extractCsrf(getResp.body)}`);
 
       if (isCloudflareChallenge(getResp.body)) {
         console.error(`BMKG fetch ${station}: CF challenge on GET (attempt ${attempt})`);
@@ -123,7 +157,7 @@ export async function fetchBMKGPage(options: BmkgFetchOptions): Promise<string |
 
       const csrf = extractCsrf(getResp.body);
       if (!csrf) {
-        console.error(`BMKG fetch ${station}: no CSRF token (attempt ${attempt})`);
+        console.error(`BMKG fetch ${station}: no CSRF token. Body preview: ${getResp.body.substring(0, 300)}`);
         if (attempt < 3) await new Promise(r => setTimeout(r, 1500));
         continue;
       }
@@ -152,6 +186,8 @@ export async function fetchBMKGPage(options: BmkgFetchOptions): Promise<string |
         body: formData.toString(),
       });
 
+      console.log(`BMKG ${station} POST: status=${postResp.statusCode} len=${postResp.body.length} hasCF=${isCloudflareChallenge(postResp.body)} hasTable=${postResp.body.includes('<table')}`);
+
       if (isCloudflareChallenge(postResp.body)) {
         console.error(`BMKG fetch ${station}: CF challenge on POST (attempt ${attempt})`);
         if (attempt < 3) await new Promise(r => setTimeout(r, 2000 * attempt));
@@ -159,7 +195,7 @@ export async function fetchBMKGPage(options: BmkgFetchOptions): Promise<string |
       }
 
       if (!postResp.body.includes('<table')) {
-        console.error(`BMKG fetch ${station}: no table (attempt ${attempt})`);
+        console.error(`BMKG fetch ${station}: no table. Body preview: ${postResp.body.substring(0, 300)}`);
         if (attempt < 3) await new Promise(r => setTimeout(r, 1500));
         continue;
       }
